@@ -8,7 +8,7 @@
 | 创建时间 | 2026-06-19 |
 | 优先级 | P0 |
 | 关联阶段 | Phase 0 |
-| 来源文档 | `docs/requirements.md`、`docs/architecture/overview.md`、[Issue #001](001-proposal-inference-perf-platform-260619-wip.md) |
+| 来源文档 | `docs/requirements.md`、`docs/architecture.md`、[Issue #001](001-proposal-inference-perf-platform-260619-wip.md) |
 
 ---
 
@@ -24,7 +24,7 @@
 - `apiserver/`：独立 Go 二进制，提供 `/api/health`、`/api/config`、`/api/library/{kind}`，含 CORS。
 - `data/`：Ascend + Qwen 为主的种子数据，建立 provenance 格式。
 - `web/`：Vite + React + TS 骨架（Dashboard + 通用库浏览页），与 API 的类型化客户端。
-- CI：扩展模块与前端构建、测试（见 `docs/architecture/overview.md` 的 CI 章节）。
+- CI：扩展模块与前端构建、测试（见 `docs/architecture.md` 的 CI 章节）。
 
 ## 实现内容（进行中）
 

@@ -1,7 +1,7 @@
 # 需求描述文档（Requirements）
 
 > 状态：草拟中（v0.1）。本文件为持续更新文档，随阶段推进修订；变更见文末“变更记录”。
-> 关联：`docs/architecture/overview.md`（架构）、`docs/issues/`（执行追踪）、
+> 关联：`docs/architecture.md`（架构）、`docs/issues/`（执行追踪）、
 > `docs/UPSTREAM-DELTAS.md`（基座同步约束）。
 
 ## 1. 背景与定位

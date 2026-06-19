@@ -8,7 +8,7 @@
 | 创建时间 | 2026-06-19 |
 | 优先级 | P0 |
 | 关联阶段 | Phase 0~5 |
-| 来源文档 | `~/Downloads/ascend_qwen_inference_sim_research.pdf`、`docs/requirements.md`、`docs/architecture/overview.md` |
+| 来源文档 | `~/Downloads/ascend_qwen_inference_sim_research.pdf`、`docs/requirements.md`、`docs/architecture.md` |
 
 ---
 
@@ -22,14 +22,14 @@
 ## 目标
 
 - 沉淀一份可持续更新的需求描述文档与架构设计文档（见 `docs/requirements.md`、
-  `docs/architecture/overview.md`）。
+  `docs/architecture.md`）。
 - 以阶段化路线图推进：Phase 0 基础设施 → Phase 1 四大库 → Phase 2 解析模型 →
   Phase 3 性能数据库 → Phase 4 组合仿真 → Phase 5 Ascend 保真与泛化。
 - 全程满足“基座可独立同步上游”的硬约束（见 [Issue #003](003-refactor-base-vendor-split-260619-done.md)）。
 
 ## 实现内容（done 时填写）
 
-- 路线图与阶段拆分见 `docs/requirements.md` 第“路线图”章节；架构见 `docs/architecture/overview.md`。
+- 路线图与阶段拆分见 `docs/requirements.md` 第“路线图”章节；架构见 `docs/architecture.md`。
 - 各阶段以独立 issue 跟踪（Phase 0 见 [Issue #002](002-feature-platform-scaffolding-260619-wip.md)）。
 
 ## 验证（done 时填写）
