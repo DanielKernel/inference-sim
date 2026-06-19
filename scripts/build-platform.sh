@@ -7,8 +7,10 @@ cd "$ROOT"
 
 mkdir -p .bin
 
+"$ROOT/scripts/download-go-deps.sh"
+
 echo ">> Building Go API server"
-go build -o .bin/apiserver ./apiserver
+go build -mod=readonly -o .bin/apiserver ./apiserver
 
 echo ">> Building web app"
 (

@@ -3,6 +3,8 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $Root
 
+& (Join-Path $PSScriptRoot "download-go-deps.ps1")
+
 $BinDir = Join-Path $Root ".bin"
 if (-not (Test-Path $BinDir)) {
     New-Item -ItemType Directory -Path $BinDir | Out-Null
@@ -10,7 +12,7 @@ if (-not (Test-Path $BinDir)) {
 $ApiExe = Join-Path $BinDir "apiserver.exe"
 
 Write-Host ">> Building Go API server"
-go build -o "$ApiExe" ./apiserver
+go build -mod=readonly -o "$ApiExe" ./apiserver
 if (-not (Test-Path $ApiExe)) {
     throw "API executable was not found after build: $ApiExe"
 }

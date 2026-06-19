@@ -66,6 +66,8 @@ scripts\run-platform.cmd
 5. 在页面里完成**配置、仿真和结果查看**。
 
 > 默认地址为 `http://localhost:8080`。停止时按 `Ctrl+C`。
+> Go 依赖会在**构建前**通过独立步骤下载到本机模块缓存；如果依赖已经在缓存中，脚本不会重复下载。
+> 运行阶段只启动本地已构建的可执行文件，不会在运行时联网下载 Go 依赖源码。
 
 如果只想构建、不启动：
 
@@ -82,6 +84,23 @@ scripts\run-platform.cmd
 ```bat
 REM Windows CMD / 双击入口
 scripts\build-platform.cmd
+```
+
+如果只想**预下载 Go 依赖**、不立即构建：
+
+```bash
+# Ubuntu / macOS
+./scripts/download-go-deps.sh
+```
+
+```powershell
+# Windows PowerShell / Windows Terminal
+.\scripts\download-go-deps.ps1
+```
+
+```bat
+REM Windows CMD
+scripts\download-go-deps.cmd
 ```
 
 ### 1) 扩展模块（API + 库）

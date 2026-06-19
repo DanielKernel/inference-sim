@@ -11,27 +11,19 @@ $ApiExe = Join-Path $BinDir "apiserver.exe"
 $DataDir = Join-Path $Root "data"
 $WebDir = Join-Path (Join-Path $Root "web") "dist"
 
+if (-not (Test-Path $ApiExe)) {
+    throw "API executable was not found at $ApiExe. Please run .\scripts\build-platform.ps1 first or let the build phase complete successfully."
+}
+
 Write-Host ">> Starting platform server on $Addr"
 $proc = $null
-if (Test-Path $ApiExe) {
-    $startArgs = @{
-        FilePath = $ApiExe
-        ArgumentList = @("--addr", $Addr, "--data", $DataDir, "--web-dir", $WebDir)
-        WorkingDirectory = $Root
-        PassThru = $true
-    }
-    $proc = Start-Process @startArgs
+$startArgs = @{
+    FilePath = $ApiExe
+    ArgumentList = @("--addr", $Addr, "--data", $DataDir, "--web-dir", $WebDir)
+    WorkingDirectory = $Root
+    PassThru = $true
 }
-else {
-    Write-Warning "API executable was not found at $ApiExe. Falling back to 'go run ./apiserver'."
-    $startArgs = @{
-        FilePath = "go"
-        ArgumentList = @("run", "./apiserver", "--addr", $Addr, "--data", $DataDir, "--web-dir", $WebDir)
-        WorkingDirectory = $Root
-        PassThru = $true
-    }
-    $proc = Start-Process @startArgs
-}
+$proc = Start-Process @startArgs
 
 try {
     Write-Host ">> Waiting for server health check"
