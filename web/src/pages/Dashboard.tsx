@@ -42,7 +42,7 @@ export function Dashboard() {
 
       <section className="toolbar-panel info-band">
         <div className="info-item">
-        <strong>Simulation Studio</strong>
+        <strong>仿真工作台</strong>
         <span>在一个工作台里切换平台组合仿真、解析模型和 BLIS 原生 DES</span>
         </div>
         <div className="info-item">

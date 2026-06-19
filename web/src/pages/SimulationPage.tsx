@@ -35,24 +35,30 @@ const PROCESS_STEPS = [
 type StudioTab = "platform" | "analytic" | "blis";
 
 function normalizeSimulationResponse(resp: SimulationResponse): SimulationResponse {
+  const normalizedProfiles =
+    resp.profiles && resp.profiles.length > 0
+      ? resp.profiles.map((profile) => ({
+          ...profile,
+          description: profile.description ?? "",
+          applied_optimizations: profile.applied_optimizations ?? [],
+          breakdown: profile.breakdown ?? [],
+        }))
+      : [
+          {
+            label: "当前结果",
+            description: "后端未返回更多 profile，已回退为单结果模式。",
+            metrics: resp.metrics,
+            applied_optimizations: resp.applied_optimizations ?? [],
+            bottleneck: resp.bottleneck,
+            breakdown: resp.breakdown ?? [],
+          },
+        ];
   return {
     ...resp,
     applied_optimizations: resp.applied_optimizations ?? [],
     breakdown: resp.breakdown ?? [],
     notes: resp.notes ?? [],
-    profiles:
-      resp.profiles && resp.profiles.length > 0
-        ? resp.profiles
-        : [
-            {
-              label: "当前结果",
-              description: "后端未返回更多 profile，已回退为单结果模式。",
-              metrics: resp.metrics,
-              applied_optimizations: resp.applied_optimizations ?? [],
-              bottleneck: resp.bottleneck,
-              breakdown: resp.breakdown ?? [],
-            },
-          ],
+    profiles: normalizedProfiles,
   };
 }
 
@@ -247,14 +253,14 @@ export function SimulationPage() {
     }
   }
 
-  if (loading) return <p>正在加载 Simulation Studio 所需配置…</p>;
-  if (error) return <p>无法加载 Simulation Studio：{error}</p>;
+  if (loading) return <p>正在加载仿真工作台所需配置…</p>;
+  if (error) return <p>无法加载仿真工作台：{error}</p>;
 
   return (
     <div className="page-stack">
       <section className="hero-panel hero-panel-strong">
         <div>
-          <div className="eyebrow">Simulation Studio</div>
+          <div className="eyebrow">仿真工作台</div>
           <h2>平台仿真 + 解析模型 + BLIS 原生仿真</h2>
           <p>
             将平台组合仿真、roofline 解析视图和 third_party/inference-sim 的原生离散事件仿真收敛到同一工作台，
@@ -279,9 +285,9 @@ export function SimulationPage() {
 
       <section className="studio-tabs">
         {([
-          ["platform", "Platform Combosim"],
-          ["analytic", "Roofline Analytics"],
-          ["blis", "BLIS Native DES"],
+          ["platform", "平台组合仿真"],
+          ["analytic", "Roofline 解析模型"],
+          ["blis", "BLIS 原生离散事件仿真"],
         ] as Array<[StudioTab, string]>).map(([tab, label]) => (
           <button
             key={tab}
@@ -777,10 +783,10 @@ function BLISResultPanel({ result }: { result: BLISNativeResponse }) {
   return (
     <div className="results-block">
       <div className="card-grid">
-        <MetricCard label="TTFT mean (ms)" value={result.metrics.ttft_mean_ms} accent="blue" />
-        <MetricCard label="TTFT p95 (ms)" value={result.metrics.ttft_p95_ms} accent="purple" />
-        <MetricCard label="Responses/s" value={result.metrics.responses_per_sec} accent="green" />
-        <MetricCard label="Tokens/s" value={result.metrics.tokens_per_sec} accent="orange" />
+        <MetricCard label="TTFT 均值 (ms)" value={result.metrics.ttft_mean_ms} accent="blue" />
+        <MetricCard label="TTFT P95 (ms)" value={result.metrics.ttft_p95_ms} accent="purple" />
+        <MetricCard label="响应数 / 秒" value={result.metrics.responses_per_sec} accent="green" />
+        <MetricCard label="Token / 秒" value={result.metrics.tokens_per_sec} accent="orange" />
       </div>
 
       <section className="library-layout">
