@@ -341,11 +341,19 @@ third_party/inference-sim/
 
 - `scripts/build-platform.sh`：一键构建 Go API 与 Web 静态页面；
 - `scripts/run-platform.sh`：一键构建、启动统一服务、健康检查、自动打开浏览器。
+- `scripts/build-platform.ps1` / `scripts/run-platform.ps1`：Windows PowerShell 原生入口。
+- `scripts/build-platform.cmd` / `scripts/run-platform.cmd`：Windows CMD / 双击包装入口。
 
 运行后由 `apiserver` 同时托管：
 
 - `/api/*` 后端接口
 - `web/dist` 构建后的前端页面
+
+操作系统覆盖：
+
+- **Ubuntu**：`*.sh`
+- **macOS**：`*.sh`
+- **Windows**：`*.ps1` 或 `*.cmd`
 
 ## 9. 当前差距与后续补齐点
 

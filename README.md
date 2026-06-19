@@ -40,10 +40,21 @@
 
 ## 构建方法
 
-### 一键构建、部署和运行（推荐）
+### 一键构建、部署和运行（推荐，支持 Ubuntu / macOS / Windows）
 
 ```bash
+# Ubuntu / macOS
 ./scripts/run-platform.sh
+```
+
+```powershell
+# Windows PowerShell / Windows Terminal
+.\scripts\run-platform.ps1
+```
+
+```bat
+REM Windows CMD / 双击入口
+scripts\run-platform.cmd
 ```
 
 该命令会自动：
@@ -59,7 +70,18 @@
 如果只想构建、不启动：
 
 ```bash
+# Ubuntu / macOS
 ./scripts/build-platform.sh
+```
+
+```powershell
+# Windows PowerShell / Windows Terminal
+.\scripts\build-platform.ps1
+```
+
+```bat
+REM Windows CMD / 双击入口
+scripts\build-platform.cmd
 ```
 
 ### 1) 扩展模块（API + 库）
@@ -92,11 +114,30 @@ go test ./sim/...              # 基座核心测试
 
 ### 打开 Web 页面完成配置、仿真和查看结果
 
-执行：
+执行（按操作系统选择其一）：
 
 ```bash
+# Ubuntu / macOS
 ./scripts/run-platform.sh
 ```
+
+```powershell
+# Windows PowerShell / Windows Terminal
+.\scripts\run-platform.ps1
+```
+
+```bat
+REM Windows CMD / 双击入口
+scripts\run-platform.cmd
+```
+
+脚本会自动：
+
+1. 构建 Go API 服务；
+2. 构建前端静态页面；
+3. 启动统一服务；
+4. 自动打开浏览器；
+5. 保持前台运行，按 `Ctrl+C` 可停止。
 
 浏览器打开后：
 
