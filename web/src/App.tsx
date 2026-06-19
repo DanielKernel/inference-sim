@@ -16,7 +16,13 @@ export function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <h1>推理性能平台</h1>
+        <div className="brand-block">
+          <div className="brand-dot" />
+          <div>
+            <h1>推理性能平台</h1>
+            <p>模型 · 硬件 · 框架 · 场景</p>
+          </div>
+        </div>
         <nav>
           <NavLink to="/" end>
             总览

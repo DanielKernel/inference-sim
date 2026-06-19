@@ -143,7 +143,7 @@ func buildBreakdown(ttftMs, tpotMs float64, outputTokens int, bottleneck string)
 
 	commShare := 0.10
 	kvShare := 0.10
-	if bottleneck == "memory bandwidth" {
+	if bottleneck == "显存/内存带宽" {
 		commShare = 0.08
 		kvShare = 0.21
 	}

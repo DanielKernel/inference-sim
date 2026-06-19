@@ -35,6 +35,8 @@
   `scripts/run-platform.sh`，以及 Windows 的 `build-platform.ps1` / `run-platform.ps1` /
   `*.cmd` 包装入口，可覆盖 Ubuntu / macOS / Windows，一键构建、启动并打开浏览器完成配置 /
   仿真 / 查看结果。
+- 已增强页面交互：开始仿真后展示执行过程（阶段进度 + 进度条），所有“xxx库”页面支持关键字查询，
+  并引入更完整的仪表盘式视觉层次（概览区、工具栏、过程区、结果区、详情区）。
 - 待办：Phase 1 的过滤/对比 API 与富前端页面（拆分到后续 issue）。
 
 ## 验证（部分）
