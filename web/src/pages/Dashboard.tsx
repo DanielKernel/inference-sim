@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { api, PlatformConfig } from "../api/client";
 import { OVERVIEW_TOPICS } from "../content/overviewTopics";
 
@@ -135,14 +134,58 @@ export function Dashboard() {
       </section>
 
       <section className="detail-panel">
-        <h3>总览专题子菜单</h3>
-        <div className="overview-topic-grid">
+        <h3>技术洞察</h3>
+        <p className="section-description">
+          以下内容把原先分散在总览子菜单中的专题合并到一个板块中，统一覆盖技术原理、GitHub 项目、软件实践、架构设计、数学建模、arXiv 研究与趋势建议；每条结论均附真实链接。
+        </p>
+        <div className="topic-section-stack">
           {OVERVIEW_TOPICS.map((topic) => (
-            <Link key={topic.slug} to={`/overview/${topic.slug}`} className="overview-topic-card">
+            <section className="insight-topic-group" key={topic.slug}>
               <div className="eyebrow">{topic.label}</div>
-              <strong>{topic.title}</strong>
+              <h4>{topic.title}</h4>
               <p>{topic.summary}</p>
-            </Link>
+              {topic.sections.map((section) => (
+                <div className="insight-subsection" key={`${topic.slug}-${section.title}`}>
+                  <strong>{section.title}</strong>
+                  {section.description && <p className="section-description">{section.description}</p>}
+                  <div className="insight-grid">
+                    {section.items.map((item) => (
+                      <article className="insight-card" key={`${topic.slug}-${item.title}`}>
+                        <h4>{item.title}</h4>
+                        <p>{item.summary}</p>
+                        {item.takeaways && item.takeaways.length > 0 && (
+                          <div className="insight-takeaways">
+                            <strong>落地要点</strong>
+                            <ul>
+                              {item.takeaways.map((takeaway) => (
+                                <li key={takeaway}>{takeaway}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <div className="source-stack">
+                          <strong>参考链接</strong>
+                          {item.sources.map((source) => (
+                            <div className="source-item" key={`${item.title}-${source.url}`}>
+                              <a href={source.url} target="_blank" rel="noreferrer">
+                                {source.label}
+                              </a>
+                              {(source.date || source.note) && (
+                                <span>
+                                  {source.date ? `${source.date}` : ""}
+                                  {source.date && source.note ? " · " : ""}
+                                  {source.note ? source.note : ""}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </section>
           ))}
         </div>
       </section>

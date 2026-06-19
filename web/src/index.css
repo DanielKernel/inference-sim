@@ -148,27 +148,6 @@ body {
   color: var(--text-primary);
 }
 
-.nav-group {
-  margin-bottom: 8px;
-}
-
-.nav-submenu {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: -2px 0 8px 14px;
-  padding-left: 12px;
-  border-left: 1px solid var(--panel-border);
-}
-
-.sidebar nav a.nav-subitem {
-  margin-bottom: 0;
-  padding: 8px 10px;
-  font-size: 13px;
-  border-radius: 8px;
-  color: var(--text-muted);
-}
-
 .content {
   flex: 1;
   padding: 24px 32px 40px;
@@ -641,14 +620,12 @@ input::placeholder {
   line-height: 1.5;
 }
 
-.overview-topic-grid,
 .insight-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
 }
 
-.overview-topic-card,
 .insight-card {
   display: flex;
   flex-direction: column;
@@ -661,57 +638,46 @@ input::placeholder {
   color: var(--text-secondary);
 }
 
-.overview-topic-card strong,
 .insight-card h4,
-.topic-nav-panel strong,
 .source-stack strong,
 .insight-takeaways strong {
   color: var(--text-primary);
 }
 
-.overview-topic-card p,
 .insight-card p {
   margin: 0;
   line-height: 1.6;
 }
 
-.overview-topic-card:hover,
 .insight-card:hover {
   border-color: rgba(109, 137, 255, 0.35);
   background: var(--surface-hover);
 }
 
-.topic-nav-panel {
-  padding: 18px 20px;
-  border-radius: 18px;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  box-shadow: var(--panel-shadow);
-}
-
-.topic-pill-row {
+.topic-section-stack {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.topic-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--panel-border);
-  background: var(--surface-soft);
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.topic-pill.active,
-.topic-pill:hover {
+.insight-topic-group h4 {
+  margin: 8px 0 10px;
   color: var(--text-primary);
-  border-color: rgba(109, 137, 255, 0.35);
-  background: var(--surface-hover);
+}
+
+.insight-topic-group > p {
+  margin: 0 0 16px;
+  line-height: 1.7;
+}
+
+.insight-subsection {
+  margin-top: 18px;
+}
+
+.insight-subsection > strong {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--text-primary);
 }
 
 .insight-takeaways ul {
