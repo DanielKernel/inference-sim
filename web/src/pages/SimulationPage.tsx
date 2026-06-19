@@ -35,6 +35,11 @@ export function SimulationPage() {
   const [device, setDevice] = useState("");
   const [framework, setFramework] = useState("");
   const [scenario, setScenario] = useState("");
+  const [runtimeVersion, setRuntimeVersion] = useState("v0.21.0rc1");
+  const [cannVersion, setCANNVersion] = useState("9.0.0");
+  const [graphMode, setGraphMode] = useState("hybrid");
+  const [quantMode, setQuantMode] = useState("kv_int8");
+  const [commMode, setCommMode] = useState("flashcomm_v1");
   const [inputTokens, setInputTokens] = useState(0);
   const [outputTokens, setOutputTokens] = useState(0);
   const [autoOptimize, setAutoOptimize] = useState(true);
@@ -60,6 +65,7 @@ export function SimulationPage() {
         setScenario(s[0]?.name ?? "");
         setInputTokens(s[0]?.input_tokens.typical ?? 0);
         setOutputTokens(s[0]?.output_tokens.typical ?? 0);
+        setRuntimeVersion(f[0]?.latest_version ?? "v0.21.0rc1");
       })
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
@@ -106,6 +112,11 @@ export function SimulationPage() {
         hardware: device,
         framework,
         scenario,
+        runtime_version: runtimeVersion,
+        cann_version: cannVersion,
+        graph_mode: graphMode,
+        quant_mode: quantMode,
+        comm_mode: commMode,
         input_tokens: inputTokens,
         output_tokens: outputTokens,
         auto_optimize: autoOptimize,
@@ -195,6 +206,51 @@ export function SimulationPage() {
                   {item.name}
                 </option>
               ))}
+            </select>
+          </label>
+
+          <label>
+            <span>运行时版本</span>
+            <select value={runtimeVersion} onChange={(e) => setRuntimeVersion(e.target.value)}>
+              <option value="v0.21.0rc1">v0.21.0rc1</option>
+              <option value="v0.20.2rc1">v0.20.2rc1</option>
+              <option value="v0.19.1rc1">v0.19.1rc1</option>
+              <option value="v0.18.0">v0.18.0</option>
+            </select>
+          </label>
+
+          <label>
+            <span>CANN 版本</span>
+            <select value={cannVersion} onChange={(e) => setCANNVersion(e.target.value)}>
+              <option value="9.0.0">9.0.0</option>
+              <option value="8.5.1">8.5.1</option>
+              <option value="8.5.0">8.5.0</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Graph 模式</span>
+            <select value={graphMode} onChange={(e) => setGraphMode(e.target.value)}>
+              <option value="hybrid">hybrid</option>
+              <option value="full">full</option>
+              <option value="eager">eager</option>
+            </select>
+          </label>
+
+          <label>
+            <span>量化模式</span>
+            <select value={quantMode} onChange={(e) => setQuantMode(e.target.value)}>
+              <option value="kv_int8">kv_int8</option>
+              <option value="w8a8">w8a8</option>
+              <option value="fp16">fp16</option>
+            </select>
+          </label>
+
+          <label>
+            <span>通信模式</span>
+            <select value={commMode} onChange={(e) => setCommMode(e.target.value)}>
+              <option value="flashcomm_v1">flashcomm_v1</option>
+              <option value="hccs_native">hccs_native</option>
             </select>
           </label>
 
@@ -326,6 +382,10 @@ export function SimulationPage() {
               <strong>当前组合：</strong> {result.selection.model} / {result.selection.hardware} /{" "}
               {result.selection.framework} / {result.selection.scenario}（输入
               {result.selection.input_tokens}，输出 {result.selection.output_tokens}）
+            </p>
+            <p>
+              <strong>运行时配置：</strong> {result.selection.runtime_version} / CANN {result.selection.cann_version} /{" "}
+              {result.selection.graph_mode} / {result.selection.quant_mode} / {result.selection.comm_mode}
             </p>
             <div className="tag-row">
               {result.applied_optimizations.map((item) => (

@@ -165,11 +165,12 @@ scripts\run-platform.cmd
 
 1. 进入 **Simulate** 页面；
 2. 选择 **Model / Hardware / Framework / Scenario**；
-3. 可修改 **Input tokens / Output tokens**；
-4. 选择 **自动优化** 或手工勾选优化手段；
-5. 点击 **Run simulation**；
-6. 在页面中查看**仿真执行过程**（输入校验、画像加载、优化手段筛选、指标估算、分段生成、结果汇总）；
-7. 查看 **TTFT / TPOT / Throughput / E2E**、瓶颈判定、应用的优化手段，以及全流程分段结果。
+3. 可配置 **运行时版本 / CANN 版本 / Graph 模式 / 量化模式 / 通信模式**；
+4. 可修改 **Input tokens / Output tokens**；
+5. 选择 **自动优化** 或手工勾选优化手段；
+6. 点击 **Run simulation**；
+7. 在页面中查看**仿真执行过程**（输入校验、画像加载、优化手段筛选、指标估算、分段生成、结果汇总）；
+8. 查看 **TTFT / TPOT / Throughput / E2E**、瓶颈判定、应用的优化手段，以及**阶段耗时时序图**与分段结果。
 
 ### 所有“xxx库”页面均支持查询
 

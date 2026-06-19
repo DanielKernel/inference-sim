@@ -14,6 +14,11 @@ type simulateRequest struct {
 	Hardware              string   `json:"hardware"`
 	Framework             string   `json:"framework"`
 	Scenario              string   `json:"scenario"`
+	RuntimeVersion        string   `json:"runtime_version"`
+	CANNVersion           string   `json:"cann_version"`
+	GraphMode             string   `json:"graph_mode"`
+	QuantMode             string   `json:"quant_mode"`
+	CommMode              string   `json:"comm_mode"`
 	InputTokens           int      `json:"input_tokens"`
 	OutputTokens          int      `json:"output_tokens"`
 	AutoOptimize          bool     `json:"auto_optimize"`
@@ -31,12 +36,17 @@ type stageBreakdown struct {
 
 type simulateResponse struct {
 	Selection struct {
-		Model        string `json:"model"`
-		Hardware     string `json:"hardware"`
-		Framework    string `json:"framework"`
-		Scenario     string `json:"scenario"`
-		InputTokens  int    `json:"input_tokens"`
-		OutputTokens int    `json:"output_tokens"`
+		Model          string `json:"model"`
+		Hardware       string `json:"hardware"`
+		Framework      string `json:"framework"`
+		Scenario       string `json:"scenario"`
+		RuntimeVersion string `json:"runtime_version"`
+		CANNVersion    string `json:"cann_version"`
+		GraphMode      string `json:"graph_mode"`
+		QuantMode      string `json:"quant_mode"`
+		CommMode       string `json:"comm_mode"`
+		InputTokens    int    `json:"input_tokens"`
+		OutputTokens   int    `json:"output_tokens"`
 	} `json:"selection"`
 	Metrics struct {
 		TTFTms         float64 `json:"ttft_ms"`
@@ -97,6 +107,7 @@ func (s *Server) simulate(req simulateRequest) (*simulateResponse, error) {
 	applicable := applicableOptimizations(s.store.Optimizations, fw.Name)
 	applied := chooseOptimizations(applicable, req.AutoOptimize, req.SelectedOptimizations)
 	latencyFactor, throughputFactor, notes := combineOptimizationEffects(applicable, applied)
+	latencyFactor, throughputFactor, notes = applyRuntimeProfileAdjustments(req, latencyFactor, throughputFactor, notes)
 
 	ttftComputeMs := float64(inputTokens) * model.ParamsB * 0.03 / math.Max(hw.FP16TFlops/100.0, 0.1)
 	ttftMemoryMs := float64(inputTokens) * model.ParamsB * 0.012 / math.Max(hw.MemoryBandwidthTBs, 0.1)
@@ -126,6 +137,11 @@ func (s *Server) simulate(req simulateRequest) (*simulateResponse, error) {
 	resp.Selection.Hardware = hw.Name
 	resp.Selection.Framework = fw.Name
 	resp.Selection.Scenario = sc.Name
+	resp.Selection.RuntimeVersion = req.RuntimeVersion
+	resp.Selection.CANNVersion = req.CANNVersion
+	resp.Selection.GraphMode = req.GraphMode
+	resp.Selection.QuantMode = req.QuantMode
+	resp.Selection.CommMode = req.CommMode
 	resp.Selection.InputTokens = inputTokens
 	resp.Selection.OutputTokens = outputTokens
 	resp.Metrics.TTFTms = ttftMs
@@ -273,6 +289,50 @@ func combineOptimizationEffects(applicable map[string]library.Optimization, appl
 	latencyFactor = clamp(latencyFactor, 0.45, 1.10)
 	throughputFactor = clamp(throughputFactor, 1.0, 3.0)
 	return latencyFactor, throughputFactor, notes
+}
+
+func applyRuntimeProfileAdjustments(req simulateRequest, latencyFactor, throughputFactor float64, notes []string) (float64, float64, []string) {
+	switch req.GraphMode {
+	case "full":
+		latencyFactor *= 0.88
+		throughputFactor *= 1.08
+		notes = append(notes, "Full Graph 模式按稳态优化处理，适合形状较稳定的执行路径。")
+	case "hybrid":
+		latencyFactor *= 0.93
+		throughputFactor *= 1.04
+		notes = append(notes, "Hybrid Graph 在保持兼容性的同时提供部分稳态收益。")
+	case "eager":
+		notes = append(notes, "Eager 模式编译开销低，但稳态优化收益也相对有限。")
+	}
+
+	switch req.QuantMode {
+	case "w8a8":
+		latencyFactor *= 0.92
+		throughputFactor *= 1.10
+		notes = append(notes, "W8A8 量化降低权重带宽压力，通常能提升吞吐。")
+	case "kv_int8":
+		latencyFactor *= 0.96
+		throughputFactor *= 1.05
+		notes = append(notes, "KV Int8 对长上下文 decode 路径有额外收益。")
+	case "fp16":
+		notes = append(notes, "FP16 作为默认精度路径，兼顾精度与通用性。")
+	}
+
+	switch req.CommMode {
+	case "flashcomm_v1":
+		latencyFactor *= 0.95
+		throughputFactor *= 1.06
+		notes = append(notes, "FlashComm v1 对张量并行通信开销有优化作用。")
+	case "hccs_native":
+		notes = append(notes, "HCCS Native 更接近基础互联路径，适合观察通信瓶颈。")
+	}
+
+	if req.CANNVersion == "9.0.0" {
+		throughputFactor *= 1.03
+		notes = append(notes, "CANN 9.0.0 被视为新特性路径，默认给予小幅实现收益。")
+	}
+
+	return clamp(latencyFactor, 0.40, 1.10), clamp(throughputFactor, 1.0, 3.2), notes
 }
 
 func clamp(v, lo, hi float64) float64 {

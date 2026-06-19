@@ -54,6 +54,11 @@ export interface SimulateRequest {
   hardware: string;
   framework: string;
   scenario: string;
+  runtime_version: string;
+  cann_version: string;
+  graph_mode: string;
+  quant_mode: string;
+  comm_mode: string;
   input_tokens: number;
   output_tokens: number;
   auto_optimize: boolean;
@@ -75,6 +80,11 @@ export interface SimulationResponse {
     hardware: string;
     framework: string;
     scenario: string;
+    runtime_version: string;
+    cann_version: string;
+    graph_mode: string;
+    quant_mode: string;
+    comm_mode: string;
     input_tokens: number;
     output_tokens: number;
   };

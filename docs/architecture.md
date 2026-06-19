@@ -202,6 +202,7 @@ items:
 - **性能数据库查询**：根据组合条件查询公开测试结果。
 - **组合仿真**：自动/手动选择优化手段，输出最差/最佳/典型结果并附加解释。
 - **全流程分段**：对单次结果做 QKV / Attention / FFN / KV / Comm / Sampling 等消耗分解。
+- **运行时维度建模**：支持 runtime version / CANN version / graph mode / quant mode / comm mode 等参数进入仿真输入。
 
 其中：
 
