@@ -1,0 +1,45 @@
+name: Base Drift Check
+
+# Detects when the vendored BLIS base (third_party/inference-sim) has fallen
+# behind upstream inference-sim. Because the base lives in a subdirectory, this
+# does NOT use a root-level git merge — it diffs the prefix against a fresh
+# upstream checkout and reports drift. To actually update, run
+# scripts/update-base.sh locally. See docs/UPSTREAM-DELTAS.md.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Upstream ref to compare against"
+        default: "main"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout upstream into a temp dir
+        run: |
+          REF="${{ github.event.inputs.ref || 'main' }}"
+          git clone --depth 1 --branch "$REF" \
+            https://github.com/inference-sim/inference-sim.git /tmp/upstream
+          rm -rf /tmp/upstream/.git
+      - name: Diff vendored base against upstream
+        run: |
+          # Compare the vendored prefix to upstream. The vendored base also
+          # carries its own (inert) .github; upstream has the same paths, so the
+          # comparison is apples-to-apples.
+          if diff -ruq third_party/inference-sim /tmp/upstream \
+               > /tmp/base-drift.txt 2>&1; then
+            echo "Vendored base is in sync with upstream."
+          else
+            echo "::warning::Vendored base differs from upstream. Run scripts/update-base.sh to refresh."
+            echo "----- drift summary -----"
+            grep -E '^(Only in|Files )' /tmp/base-drift.txt | head -100 || true
+          fi

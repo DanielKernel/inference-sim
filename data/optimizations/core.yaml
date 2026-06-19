@@ -1,0 +1,80 @@
+schema_version: 1
+kind: optimization
+provenance:
+  source: "Inference framework optimization survey + Ascend+Qwen design report"
+  url: ""
+  retrieved: "2026-06-19"
+  notes: "Effect factors are first-order modeling estimates, refined in later phases by calibration."
+items:
+  - id: paged-kv-cache
+    name: "Paged KV cache"
+    category: kv_cache
+    description: "Block-based KV allocation to eliminate fragmentation and raise effective capacity."
+    frameworks: [vllm, vllm-ascend, sglang, trt-llm]
+    applicability: "Always applicable for autoregressive decode."
+    latency_factor: 1.0
+    throughput_factor: 1.3
+    memory_factor: 0.7
+    depends_on: []
+    conflicts_with: []
+    references: []
+  - id: chunked-prefill
+    name: "Chunked prefill"
+    category: scheduling
+    description: "Split long prefills into chunks to reduce decode TTFT interference."
+    frameworks: [vllm, vllm-ascend, sglang]
+    applicability: "Beneficial when prefill and decode share an instance."
+    latency_factor: 1.05
+    throughput_factor: 1.1
+    memory_factor: 1.0
+    depends_on: []
+    conflicts_with: []
+    references: []
+  - id: prefix-cache
+    name: "Prefix cache"
+    category: kv_cache
+    description: "Reuse KV for shared prompt prefixes to skip recomputation."
+    frameworks: [vllm, vllm-ascend, sglang, xllm]
+    applicability: "High-impact when prompts share long common prefixes."
+    latency_factor: 0.7
+    throughput_factor: 1.4
+    memory_factor: 1.0
+    depends_on: [paged-kv-cache]
+    conflicts_with: []
+    references: []
+  - id: kv-int8
+    name: "KV cache Int8"
+    category: quantization
+    description: "Int8-quantized KV cache halves KV read bandwidth in decode."
+    frameworks: [vllm-ascend, trt-llm]
+    applicability: "Memory-bound decode with large active context."
+    latency_factor: 0.8
+    throughput_factor: 1.2
+    memory_factor: 0.5
+    depends_on: []
+    conflicts_with: []
+    references: []
+  - id: speculative-decoding
+    name: "Speculative decoding"
+    category: speculative
+    description: "Draft small model proposes tokens; target verifies in parallel."
+    frameworks: [vllm, vllm-ascend, sglang, trt-llm]
+    applicability: "Decode-bound workloads with predictable text."
+    latency_factor: 0.6
+    throughput_factor: 1.8
+    memory_factor: 1.1
+    depends_on: []
+    conflicts_with: []
+    references: []
+  - id: graph-mode
+    name: "Graph mode (CUDA/ACL graph)"
+    category: graph
+    description: "Capture execution graph for steady-state kernel-launch savings."
+    frameworks: [vllm-ascend, trt-llm]
+    applicability: "Steady-state decode with stable shapes; first-run compile cost."
+    latency_factor: 0.85
+    throughput_factor: 1.15
+    memory_factor: 1.0
+    depends_on: []
+    conflicts_with: []
+    references: []

@@ -1,0 +1,89 @@
+:root {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #1a1a2e;
+  background: #f6f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 230px;
+  background: #16213e;
+  color: #e8e8f0;
+  padding: 20px 16px;
+}
+
+.sidebar h1 {
+  font-size: 16px;
+  margin: 0 0 20px;
+}
+
+.sidebar nav a {
+  display: block;
+  color: #b8c0e0;
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.sidebar nav a.active,
+.sidebar nav a:hover {
+  background: #0f3460;
+  color: #fff;
+}
+
+.content {
+  flex: 1;
+  padding: 28px 36px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e3e6f0;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.card .num {
+  font-size: 30px;
+  font-weight: 700;
+  color: #0f3460;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eef0f6;
+  font-size: 14px;
+}
+
+th {
+  background: #eef1f8;
+}

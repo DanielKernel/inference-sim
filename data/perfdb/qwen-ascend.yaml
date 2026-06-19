@@ -1,0 +1,32 @@
+schema_version: 1
+kind: perf_record
+provenance:
+  source: "Placeholder seed — to be replaced with cited published measurements in Phase 3"
+  url: ""
+  retrieved: "2026-06-19"
+  notes: "Illustrative values only; each production record must carry a real source + date."
+items:
+  - model: qwen3-32b
+    hardware: ascend-910b
+    framework: vllm-ascend
+    framework_version: "v0.21.0rc1"
+    driver: "CANN 9.0.0"
+    input_tokens: 1024
+    output_tokens: 256
+    batch_size: 16
+    concurrency: 16
+    quantization: w8a8
+    kv_quantization: int8
+    tp_size: 4
+    pp_size: 1
+    metrics:
+      ttft_ms: 180.0
+      itl_ms: 22.0
+      e2e_ms: 5800.0
+      throughput_tok_s: 720.0
+    test_conditions: "Synthetic Poisson workload, QPS 6.45, graph mode hybrid."
+    source:
+      title: "Illustrative placeholder"
+      url: ""
+      kind: benchmark
+    date: "2026-06-16"

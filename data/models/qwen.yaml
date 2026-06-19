@@ -1,0 +1,79 @@
+schema_version: 1
+kind: model
+provenance:
+  source: "Qwen technical reports + HuggingFace model configs"
+  url: "https://github.com/QwenLM/Qwen3"
+  retrieved: "2026-06-19"
+  notes: "Tier-A dense text models prioritized per Ascend+Qwen design report."
+items:
+  - name: qwen3-8b
+    display_name: "Qwen3-8B"
+    developer: "Alibaba Qwen"
+    category: llm
+    params_b: 8.2
+    architecture:
+      type: decoder_only
+      num_layers: 36
+      hidden_size: 4096
+      num_heads: 32
+      num_kv_heads: 8
+      head_dim: 128
+      attention_type: gqa
+      ffn_size: 12288
+      vocab_size: 151936
+      max_seq_len: 32768
+      rope_theta: 1000000.0
+    key_algorithms:
+      - "GQA (grouped-query attention)"
+      - "RoPE with YaRN scaling for long context"
+      - "Thinking mode (reasoning tokens before answer)"
+    quant_support:
+      - fp16
+      - bf16
+      - w8a8
+    references:
+      - title: "Qwen3 Technical Report"
+        url: "https://github.com/QwenLM/Qwen3"
+        kind: tech_report
+    benchmarks:
+      - name: "MMLU"
+        metric: "accuracy"
+        value: 76.9
+        source: "Qwen3 technical report"
+    tags: [qwen, dense, ascend-tier-a]
+  - name: qwen3-32b
+    display_name: "Qwen3-32B"
+    developer: "Alibaba Qwen"
+    category: llm
+    params_b: 32.8
+    architecture:
+      type: decoder_only
+      num_layers: 64
+      hidden_size: 5120
+      num_heads: 40
+      num_kv_heads: 8
+      head_dim: 128
+      attention_type: gqa
+      ffn_size: 25600
+      vocab_size: 151936
+      max_seq_len: 32768
+      rope_theta: 1000000.0
+    key_algorithms:
+      - "GQA (grouped-query attention)"
+      - "RoPE with YaRN scaling for long context"
+      - "Thinking mode (reasoning tokens before answer)"
+    quant_support:
+      - fp16
+      - bf16
+      - w8a8
+      - kv_int8
+    references:
+      - title: "Qwen3 Technical Report"
+        url: "https://github.com/QwenLM/Qwen3"
+        kind: tech_report
+    benchmarks:
+      - name: "MMLU"
+        metric: "accuracy"
+        value: 82.4
+        source: "Qwen3 technical report"
+    tags: [qwen, dense, ascend-tier-a]

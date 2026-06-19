@@ -1,0 +1,74 @@
+schema_version: 1
+kind: hardware
+provenance:
+  source: "Huawei Ascend public specs + Ascend+Qwen design report"
+  url: "https://www.hiascend.com"
+  retrieved: "2026-06-19"
+  notes: "FP16-equivalent compute; HCCS interconnect per design report (3 links/NPU, 90 GB/s, 4P full mesh)."
+items:
+  - name: ascend-910b
+    vendor: Huawei
+    device_type: npu
+    chip_type: "910B"
+    year: 2024
+    fp16_tflops: 256.0
+    fp8_tflops: 0
+    int8_tops: 512.0
+    memory_gib: 64.0
+    memory_bandwidth_tbs: 1.2
+    power_w: 400.0
+    interconnect:
+      type: HCCS
+      links_per_device: 3
+      bandwidth_per_link_gbs: 90.0
+      topology: "4p_full_mesh"
+    supported_dtypes: [fp16, bf16, int8]
+    references:
+      - title: "Ascend 910B product page"
+        url: "https://www.hiascend.com"
+        kind: docs
+    tags: [ascend, npu]
+  - name: ascend-950
+    vendor: Huawei
+    device_type: npu
+    chip_type: "950"
+    year: 2026
+    fp16_tflops: 512.0
+    fp8_tflops: 1024.0
+    int8_tops: 1024.0
+    memory_gib: 128.0
+    memory_bandwidth_tbs: 2.0
+    power_w: 600.0
+    interconnect:
+      type: HCCS
+      links_per_device: 7
+      bandwidth_per_link_gbs: 112.0
+      topology: "8p_full_mesh"
+    supported_dtypes: [fp16, bf16, fp8, int8]
+    references:
+      - title: "Ascend 950 announcement"
+        url: "https://www.hiascend.com"
+        kind: docs
+    tags: [ascend, npu, "2026"]
+  - name: ascend-310p
+    vendor: Huawei
+    device_type: npu
+    chip_type: "310P"
+    year: 2023
+    fp16_tflops: 22.0
+    fp8_tflops: 0
+    int8_tops: 88.0
+    memory_gib: 24.0
+    memory_bandwidth_tbs: 0.2
+    power_w: 72.0
+    interconnect:
+      type: PCIe
+      links_per_device: 1
+      bandwidth_per_link_gbs: 32.0
+      topology: "none"
+    supported_dtypes: [fp16, int8]
+    references:
+      - title: "Ascend 310P product page"
+        url: "https://www.hiascend.com"
+        kind: docs
+    tags: [ascend, npu, edge]

@@ -1,0 +1,36 @@
+name: Base CI (vendored inference-sim)
+
+# Builds and smoke-tests the vendored BLIS base module under
+# third_party/inference-sim. The base keeps its own (inert) workflows inside that
+# directory; this root workflow is what GitHub actually executes. See
+# docs/UPSTREAM-DELTAS.md.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "third_party/inference-sim/**"
+      - ".github/workflows/base-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "third_party/inference-sim/**"
+      - ".github/workflows/base-ci.yml"
+
+jobs:
+  base-build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: third_party/inference-sim
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+          cache-dependency-path: third_party/inference-sim/go.sum
+      - name: Build base
+        run: go build -v ./...
+      - name: Test base core
+        run: go test -timeout 15m ./sim/... .
