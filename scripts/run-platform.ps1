@@ -1,16 +1,31 @@
 $ErrorActionPreference = "Stop"
 
-$Root = Split-Path -Parent $PSScriptRoot
+$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Addr = if ($env:ADDR) { $env:ADDR } else { ":8080" }
 $Url = if ($env:URL) { $env:URL } else { "http://localhost:8080" }
 
 & (Join-Path $PSScriptRoot "build-platform.ps1")
 
+$BinDir = Join-Path $Root ".bin"
+$ApiExe = Join-Path $BinDir "apiserver.exe"
+$DataDir = Join-Path $Root "data"
+$WebDir = Join-Path (Join-Path $Root "web") "dist"
+
 Write-Host ">> Starting platform server on $Addr"
-$apiExe = Join-Path $Root ".bin\apiserver.exe"
-$proc = Start-Process -FilePath $apiExe `
-    -ArgumentList @("--addr", $Addr, "--data", (Join-Path $Root "data"), "--web-dir", (Join-Path $Root "web\dist")) `
-    -PassThru
+$proc = $null
+if (Test-Path $ApiExe) {
+    $proc = Start-Process -FilePath "$ApiExe" `
+        -ArgumentList @("--addr", $Addr, "--data", $DataDir, "--web-dir", $WebDir) `
+        -WorkingDirectory $Root `
+        -PassThru
+}
+else {
+    Write-Warning "未找到 $ApiExe，回退到 'go run ./apiserver' 方式启动。"
+    $proc = Start-Process -FilePath "go" `
+        -ArgumentList @("run", "./apiserver", "--addr", $Addr, "--data", $DataDir, "--web-dir", $WebDir) `
+        -WorkingDirectory $Root `
+        -PassThru
+}
 
 try {
     Write-Host ">> Waiting for server health check"

@@ -139,6 +139,9 @@ scripts\run-platform.cmd
 4. 自动打开浏览器；
 5. 保持前台运行，按 `Ctrl+C` 可停止。
 
+> Windows PowerShell 入口会优先使用 `.bin\apiserver.exe`；如果构建产物因环境差异未落盘，
+> 会自动回退到 `go run ./apiserver` 启动，避免 `Start-Process` 因找不到 exe 直接失败。
+
 浏览器打开后：
 
 1. 进入 **Simulate** 页面；
