@@ -125,6 +125,7 @@ replace github.com/inference-sim/inference-sim => ./third_party/inference-sim
 - 浏览/筛选四大参考库；
 - 查看曲线、瓶颈、对比结果；
 - 查看性能数据库中的公开数据及测试条件。
+- 通过一键脚本启动后，直接在浏览器中完成配置、仿真与结果查看。
 
 当前技术选型：
 
@@ -148,6 +149,7 @@ API 层是平台对外统一入口，职责包括：
 - `GET /api/health`
 - `GET /api/config`
 - `GET /api/library/{kind}`
+- `POST /api/simulate`
 
 后续演进：
 
@@ -332,6 +334,18 @@ third_party/inference-sim/
 - `platform.yml`：扩展模块 + 前端
 - `base-ci.yml`：基座模块
 - `base-drift-check.yml`：基座漂移检查
+
+### 8.3 一键构建与运行
+
+根目录提供：
+
+- `scripts/build-platform.sh`：一键构建 Go API 与 Web 静态页面；
+- `scripts/run-platform.sh`：一键构建、启动统一服务、健康检查、自动打开浏览器。
+
+运行后由 `apiserver` 同时托管：
+
+- `/api/*` 后端接口
+- `web/dist` 构建后的前端页面
 
 ## 9. 当前差距与后续补齐点
 

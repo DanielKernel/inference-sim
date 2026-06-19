@@ -19,6 +19,7 @@ import (
 func main() {
 	addr := flag.String("addr", ":8080", "HTTP listen address")
 	dataDir := flag.String("data", "data", "path to curated data/ directory")
+	webDir := flag.String("web-dir", "", "path to built web assets directory to serve as the UI")
 	flag.Parse()
 
 	store, err := library.Load(*dataDir)
@@ -29,7 +30,7 @@ func main() {
 		len(store.Models), len(store.Hardware), len(store.Frameworks),
 		len(store.Scenarios), len(store.PerfRecords), len(store.Optimizations))
 
-	srv := NewServer(store, *dataDir)
+	srv := NewServer(store, *dataDir, *webDir)
 
 	httpSrv := &http.Server{
 		Addr:              *addr,

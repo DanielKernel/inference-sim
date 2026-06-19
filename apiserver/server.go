@@ -3,6 +3,9 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/DanielKernel/inference-sim-platform/library"
 )
@@ -11,11 +14,12 @@ import (
 type Server struct {
 	store   *library.Store
 	dataDir string
+	webDir  string
 }
 
 // NewServer constructs a Server over an already-loaded library Store.
-func NewServer(store *library.Store, dataDir string) *Server {
-	return &Server{store: store, dataDir: dataDir}
+func NewServer(store *library.Store, dataDir, webDir string) *Server {
+	return &Server{store: store, dataDir: dataDir, webDir: webDir}
 }
 
 // Handler returns the root http.Handler with all routes and middleware applied.
@@ -24,6 +28,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/config", s.handleConfig)
 	mux.HandleFunc("GET /api/library/{kind}", s.handleLibraryList)
+	mux.HandleFunc("POST /api/simulate", s.handleSimulate)
+	if s.webDir != "" {
+		mux.HandleFunc("GET /", s.handleWeb)
+	}
 	return withCORS(mux)
 }
 
@@ -96,4 +104,23 @@ func (s *Server) handleLibraryList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, items)
+}
+
+// handleWeb serves the built SPA from webDir and falls back to index.html so
+// client-side routes keep working when opened directly.
+func (s *Server) handleWeb(w http.ResponseWriter, r *http.Request) {
+	if s.webDir == "" {
+		http.NotFound(w, r)
+		return
+	}
+	reqPath := filepath.Clean(strings.TrimPrefix(r.URL.Path, "/"))
+	if reqPath == "." || reqPath == "" {
+		reqPath = "index.html"
+	}
+	target := filepath.Join(s.webDir, reqPath)
+	if info, err := os.Stat(target); err == nil && !info.IsDir() {
+		http.ServeFile(w, r, target)
+		return
+	}
+	http.ServeFile(w, r, filepath.Join(s.webDir, "index.html"))
 }

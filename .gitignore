@@ -5,6 +5,7 @@
 # Go build artifacts
 /apiserver-bin
 /apiserver.bin
+/.bin/
 *.exe
 *.test
 *.out

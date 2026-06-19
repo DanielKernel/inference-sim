@@ -31,12 +31,15 @@
 - 已完成 `library/`（`schema.go`、`loader.go` + 测试）、`apiserver/`（`server.go`、`main.go` + 测试）、
   六类种子数据、`web/` 骨架与 `npm run build` 通过、`.github/workflows/platform.yml`。
 - JSON 契约统一为 snake_case（schema 同时带 `json`/`yaml` tag）。
+- 已补充一键运行链路：`POST /api/simulate`、`web` 中的 **Simulate** 页面、`scripts/build-platform.sh`、
+  `scripts/run-platform.sh`，可一键构建、启动并打开浏览器完成配置 / 仿真 / 查看结果。
 - 待办：Phase 1 的过滤/对比 API 与富前端页面（拆分到后续 issue）。
 
 ## 验证（部分）
 
 - `go test ./apiserver/... ./library/...` 通过；`apiserver` 本地 `curl /api/config` 返回各库计数正确。
 - `cd web && npm run build` 通过（tsc + vite）。
+- `./scripts/run-platform.sh` 可成功启动统一服务，`curl /api/health`、`curl /api/simulate` 可返回结果。
 
 ## 下一步
 

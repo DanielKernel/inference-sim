@@ -40,6 +40,28 @@
 
 ## 构建方法
 
+### 一键构建、部署和运行（推荐）
+
+```bash
+./scripts/run-platform.sh
+```
+
+该命令会自动：
+
+1. 构建 Go API 服务；
+2. 构建前端静态页面；
+3. 启动统一服务（API + Web）；
+4. 自动打开浏览器到 Web 页面；
+5. 在页面里完成**配置、仿真和结果查看**。
+
+> 默认地址为 `http://localhost:8080`。停止时按 `Ctrl+C`。
+
+如果只想构建、不启动：
+
+```bash
+./scripts/build-platform.sh
+```
+
 ### 1) 扩展模块（API + 库）
 
 ```bash
@@ -68,12 +90,32 @@ go test ./sim/...              # 基座核心测试
 
 ## 使用方法
 
+### 打开 Web 页面完成配置、仿真和查看结果
+
+执行：
+
+```bash
+./scripts/run-platform.sh
+```
+
+浏览器打开后：
+
+1. 进入 **Simulate** 页面；
+2. 选择 **Model / Hardware / Framework / Scenario**；
+3. 可修改 **Input tokens / Output tokens**；
+4. 选择 **自动优化** 或手工勾选优化手段；
+5. 点击 **Run simulation**；
+6. 查看 **TTFT / TPOT / Throughput / E2E**、瓶颈判定、应用的优化手段，以及全流程分段结果。
+
 ### 启动 API 服务
 
 ```bash
-# 默认监听 :8080，读取根目录 data/ 作为 curated 数据源
+# 默认监听 :8080，读取根目录 data/ 作为 curated 数据源，并托管构建后的前端页面
+./apiserver-bin --addr :8080 --data data --web-dir web/dist
+# 或直接运行：go run ./apiserver --addr :8080 --data data --web-dir web/dist
+
+# 如果只想启动 API、不托管前端，也可以省略 --web-dir
 ./apiserver-bin --addr :8080 --data data
-# 或直接运行：go run ./apiserver --addr :8080 --data data
 ```
 
 当前可用接口：
@@ -83,6 +125,7 @@ go test ./sim/...              # 基座核心测试
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/config` | 平台配置与各库条目计数 |
 | GET | `/api/library/{kind}` | 列出某类库条目（`models`/`hardware`/`frameworks`/`scenarios`/`optimizations`/`perf_records`） |
+| POST | `/api/simulate` | 根据模型/硬件/框架/场景/优化手段执行轻量仿真 |
 
 示例：
 
@@ -98,7 +141,8 @@ cd web
 npm run dev     # http://localhost:5173 ，/api 自动代理到 :8080
 ```
 
-> 开发时通常需要两个终端：一个运行 `apiserver-bin`（:8080），一个运行 `npm run dev`（:5173）。
+> 开发时通常需要两个终端：一个运行 `apiserver-bin --web-dir web/dist` 或 `go run ./apiserver ...`，
+> 一个运行 `npm run dev`（:5173）。正式“一键运行”优先使用 `./scripts/run-platform.sh`。
 
 ### 运行 BLIS 基座 CLI（可选）
 

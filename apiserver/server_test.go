@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -16,7 +17,7 @@ func testServer(t *testing.T) *Server {
 	if err != nil {
 		t.Fatalf("loading data: %v", err)
 	}
-	return NewServer(store, "../data")
+	return NewServer(store, "../data", "")
 }
 
 func TestHealth(t *testing.T) {
@@ -100,5 +101,48 @@ func TestCORSPreflight(t *testing.T) {
 	}
 	if rec.Header().Get("Access-Control-Allow-Origin") != "*" {
 		t.Error("missing CORS allow-origin header")
+	}
+}
+
+func TestSimulate(t *testing.T) {
+	srv := testServer(t)
+	body := `{
+	  "model":"qwen3-32b",
+	  "hardware":"ascend-910b",
+	  "framework":"vllm-ascend",
+	  "scenario":"rag",
+	  "input_tokens":4096,
+	  "output_tokens":512,
+	  "auto_optimize":true
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/api/simulate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body=%s", rec.Code, rec.Body.String())
+	}
+
+	var resp struct {
+		Metrics struct {
+			TTFTms         float64 `json:"ttft_ms"`
+			TPOTms         float64 `json:"tpot_ms"`
+			ThroughputTokS float64 `json:"throughput_tok_s"`
+		} `json:"metrics"`
+		AppliedOptimizations []string `json:"applied_optimizations"`
+		Breakdown            []any    `json:"breakdown"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Metrics.TTFTms <= 0 || resp.Metrics.TPOTms <= 0 || resp.Metrics.ThroughputTokS <= 0 {
+		t.Fatalf("expected positive metrics, got %+v", resp.Metrics)
+	}
+	if len(resp.AppliedOptimizations) == 0 {
+		t.Fatal("expected auto-optimized simulate response to include optimizations")
+	}
+	if len(resp.Breakdown) == 0 {
+		t.Fatal("expected breakdown entries")
 	}
 }
