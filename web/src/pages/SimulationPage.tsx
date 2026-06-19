@@ -14,12 +14,16 @@ import {
 import {
   AnalyticResponse,
   api,
+  BLISCalibrateResponse,
   BLISNativeResponse,
+  BLISObserveResponse,
+  BLISReplayResponse,
   FrameworkEntry,
   HardwareEntry,
   ModelEntry,
   OptimizationEntry,
   ScenarioEntry,
+  SimResult,
   SimulationResponse,
 } from "../api/client";
 
@@ -32,7 +36,7 @@ const PROCESS_STEPS = [
   "汇总结果并渲染页面",
 ];
 
-type StudioTab = "platform" | "analytic" | "blis";
+type StudioTab = "platform" | "analytic" | "run" | "replay" | "observe" | "calibrate";
 
 function normalizeSimulationResponse(resp: SimulationResponse): SimulationResponse {
   const normalizedProfiles =
@@ -109,9 +113,59 @@ export function SimulationPage() {
   const [nativeMaxRunning, setNativeMaxRunning] = useState(128);
   const [nativeMaxScheduled, setNativeMaxScheduled] = useState(2048);
   const [nativeSeed, setNativeSeed] = useState(7);
+  const [flowControlEnabled, setFlowControlEnabled] = useState(false);
+  const [flowControlDetector, setFlowControlDetector] = useState("utilization");
+  const [flowControlDispatchOrder, setFlowControlDispatchOrder] = useState("fifo");
+  const [flowControlMaxQueueDepth, setFlowControlMaxQueueDepth] = useState(0);
+  const [flowControlQueueDepthThreshold, setFlowControlQueueDepthThreshold] = useState(5);
+  const [flowControlKVThreshold, setFlowControlKVThreshold] = useState(0.8);
+  const [prefillInstances, setPrefillInstances] = useState(0);
+  const [decodeInstances, setDecodeInstances] = useState(0);
+  const [encodeInstances, setEncodeInstances] = useState(0);
+  const [pdDecider, setPDDecider] = useState("never");
+  const [pdPrefixThreshold, setPDPrefixThreshold] = useState(16);
+  const [postHocDetector, setPostHocDetector] = useState("none");
+  const [saturationThresholdMs, setSaturationThresholdMs] = useState(5000);
   const [nativeResult, setNativeResult] = useState<BLISNativeResponse | null>(null);
   const [nativeLoading, setNativeLoading] = useState(false);
   const [nativeError, setNativeError] = useState<string | null>(null);
+
+  const [replayTraceHeaderPath, setReplayTraceHeaderPath] = useState("");
+  const [replayTraceDataPath, setReplayTraceDataPath] = useState("");
+  const [replaySessionMode, setReplaySessionMode] = useState("fixed");
+  const [replayThinkTimeMs, setReplayThinkTimeMs] = useState(0);
+  const [replayResult, setReplayResult] = useState<BLISReplayResponse | null>(null);
+  const [replayLoading, setReplayLoading] = useState(false);
+  const [replayError, setReplayError] = useState<string | null>(null);
+
+  const [observeServerURL, setObserveServerURL] = useState("http://127.0.0.1:8000");
+  const [observeWorkloadPreset, setObserveWorkloadPreset] = useState("chatbot");
+  const [observeRate, setObserveRate] = useState(2);
+  const [observeNumRequests, setObserveNumRequests] = useState(20);
+  const [observePromptTokens, setObservePromptTokens] = useState(512);
+  const [observeOutputTokens, setObserveOutputTokens] = useState(256);
+  const [observePrefixTokens, setObservePrefixTokens] = useState(0);
+  const [observeAPIFormat, setObserveAPIFormat] = useState("completions");
+  const [observeRttMs, setObserveRttMs] = useState(0);
+  const [observeRecordITL, setObserveRecordITL] = useState(false);
+  const [observeConcurrency, setObserveConcurrency] = useState(0);
+  const [observeThinkTimeMs, setObserveThinkTimeMs] = useState(0);
+  const [observeTimeoutSeconds, setObserveTimeoutSeconds] = useState(60);
+  const [observePrewarmDuration, setObservePrewarmDuration] = useState("");
+  const [observeResult, setObserveResult] = useState<BLISObserveResponse | null>(null);
+  const [observeLoading, setObserveLoading] = useState(false);
+  const [observeError, setObserveError] = useState<string | null>(null);
+
+  const [calibrateTraceHeaderPath, setCalibrateTraceHeaderPath] = useState("");
+  const [calibrateTraceDataPath, setCalibrateTraceDataPath] = useState("");
+  const [calibrateWarmupRequests, setCalibrateWarmupRequests] = useState(0);
+  const [calibrateNetworkRTTUs, setCalibrateNetworkRTTUs] = useState(0);
+  const [calibrateBandwidthMbps, setCalibrateBandwidthMbps] = useState(0);
+  const [calibrateITLPath, setCalibrateITLPath] = useState("");
+  const [calibrateSimResultsText, setCalibrateSimResultsText] = useState("[]");
+  const [calibrateResult, setCalibrateResult] = useState<BLISCalibrateResponse | null>(null);
+  const [calibrateLoading, setCalibrateLoading] = useState(false);
+  const [calibrateError, setCalibrateError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -144,6 +198,11 @@ export function SimulationPage() {
     if (selectedScenario) {
       setInputTokens(selectedScenario.input_tokens.typical);
       setOutputTokens(selectedScenario.output_tokens.typical);
+      setObservePromptTokens(selectedScenario.input_tokens.typical);
+      setObserveOutputTokens(selectedScenario.output_tokens.typical);
+      if (selectedScenario.name === "chatbot" || selectedScenario.name === "summarization") {
+        setObserveWorkloadPreset(selectedScenario.name);
+      }
     }
   }, [scenario, scenarios]);
 
@@ -218,7 +277,7 @@ export function SimulationPage() {
     }
   }
 
-  async function onBLISSubmit(event: FormEvent) {
+  async function onRunSubmit(event: FormEvent) {
     event.preventDefault();
     setNativeLoading(true);
     setNativeError(null);
@@ -244,12 +303,119 @@ export function SimulationPage() {
         max_running_reqs: nativeMaxRunning,
         max_scheduled_tokens: nativeMaxScheduled,
         seed: nativeSeed,
+        flow_control_enabled: flowControlEnabled,
+        flow_control_detector: flowControlDetector,
+        flow_control_dispatch_order: flowControlDispatchOrder,
+        flow_control_max_queue_depth: flowControlMaxQueueDepth,
+        flow_control_queue_depth_threshold: flowControlQueueDepthThreshold,
+        flow_control_kv_cache_util_threshold: flowControlKVThreshold,
+        prefill_instances: prefillInstances,
+        decode_instances: decodeInstances,
+        encode_instances: encodeInstances,
+        pd_decider: pdDecider,
+        pd_prefix_threshold: pdPrefixThreshold,
+        post_hoc_detector: postHocDetector,
+        saturation_threshold_ms: saturationThresholdMs,
       });
       setNativeResult(response);
     } catch (err) {
       setNativeError(String(err));
     } finally {
       setNativeLoading(false);
+    }
+  }
+
+  async function onReplaySubmit(event: FormEvent) {
+    event.preventDefault();
+    setReplayLoading(true);
+    setReplayError(null);
+    try {
+      const response = await api.blisReplay({
+        trace_header_path: replayTraceHeaderPath,
+        trace_data_path: replayTraceDataPath,
+        model,
+        hardware: device,
+        latency_backend: nativeBackend,
+        tp: nativeTP,
+        num_instances: nativeInstances,
+        total_kv_blocks: nativeKVBlocks,
+        max_running_reqs: nativeMaxRunning,
+        max_scheduled_tokens: nativeMaxScheduled,
+        scheduler: nativeScheduler,
+        preemption_policy: nativePreemption,
+        routing_policy: nativeRoutingPolicy,
+        session_mode: replaySessionMode,
+        think_time_ms: replayThinkTimeMs,
+        horizon_us: nativeHorizonUs,
+        seed: nativeSeed,
+      });
+      setReplayResult(response);
+      setCalibrateTraceHeaderPath(response.trace.header_path);
+      setCalibrateTraceDataPath(response.trace.data_path);
+      setCalibrateSimResultsText(JSON.stringify(response.sim_results, null, 2));
+      setStudioTab("calibrate");
+    } catch (err) {
+      setReplayError(String(err));
+    } finally {
+      setReplayLoading(false);
+    }
+  }
+
+  async function onObserveSubmit(event: FormEvent) {
+    event.preventDefault();
+    setObserveLoading(true);
+    setObserveError(null);
+    try {
+      const response = await api.blisObserve({
+        server_url: observeServerURL,
+        model,
+        workload_preset: observeWorkloadPreset,
+        rate: observeRate,
+        num_requests: observeNumRequests,
+        prompt_tokens: observePromptTokens,
+        output_tokens: observeOutputTokens,
+        prefix_tokens: observePrefixTokens,
+        api_format: observeAPIFormat,
+        rtt_ms: observeRttMs,
+        record_itl: observeRecordITL,
+        concurrency: observeConcurrency,
+        think_time_ms: observeThinkTimeMs,
+        timeout_seconds: observeTimeoutSeconds,
+        prewarm_duration: observePrewarmDuration,
+      });
+      setObserveResult(response);
+      setReplayTraceHeaderPath(response.artifacts.trace_header_path);
+      setReplayTraceDataPath(response.artifacts.trace_data_path);
+      setCalibrateTraceHeaderPath(response.artifacts.trace_header_path);
+      setCalibrateTraceDataPath(response.artifacts.trace_data_path);
+      setCalibrateITLPath(response.artifacts.itl_path ?? "");
+    } catch (err) {
+      setObserveError(String(err));
+    } finally {
+      setObserveLoading(false);
+    }
+  }
+
+  async function onCalibrateSubmit(event: FormEvent) {
+    event.preventDefault();
+    setCalibrateLoading(true);
+    setCalibrateError(null);
+    try {
+      const parsedSimResults = JSON.parse(calibrateSimResultsText) as SimResult[];
+      const response = await api.blisCalibrate({
+        trace_header_path: calibrateTraceHeaderPath,
+        trace_data_path: calibrateTraceDataPath,
+        sim_results: parsedSimResults,
+        warm_up_requests: calibrateWarmupRequests,
+        network_rtt_us: calibrateNetworkRTTUs,
+        bandwidth_mbps: calibrateBandwidthMbps,
+        itl_data_path: calibrateITLPath || undefined,
+      });
+      setCalibrateResult(response);
+    } catch (err) {
+      setCalibrateError(String(err));
+    } finally {
+      setCalibrateLoading(false);
     }
   }
 
@@ -261,10 +427,10 @@ export function SimulationPage() {
       <section className="hero-panel hero-panel-strong">
         <div>
           <div className="eyebrow">仿真工作台</div>
-          <h2>平台仿真 + 解析模型 + BLIS 原生仿真</h2>
+          <h2>平台仿真 + 解析模型 + BLIS 全流程工作台</h2>
           <p>
-            将平台组合仿真、roofline 解析视图和 third_party/inference-sim 的原生离散事件仿真收敛到同一工作台，
-            让 Web UI 不再只覆盖 vllm-ascend 这一条路径。
+            在一个界面里集中呈现组合仿真、roofline 分析、BLIS 原生 Run、Replay、Observe 与 Calibrate
+            能力，让 Web UI 与基座 CLI 的主工作流逐步对齐。
           </p>
         </div>
         <div className="hero-stats">
@@ -274,11 +440,11 @@ export function SimulationPage() {
           </div>
           <div className="mini-stat">
             <strong>{nativeHardware.length}</strong>
-            <span>可跑原生 BLIS 的硬件</span>
+            <span>支持原生仿真的硬件</span>
           </div>
           <div className="mini-stat">
-            <strong>3</strong>
-            <span>统一工作台模式</span>
+            <strong>6</strong>
+            <span>工作台模式</span>
           </div>
         </div>
       </section>
@@ -287,7 +453,10 @@ export function SimulationPage() {
         {([
           ["platform", "平台组合仿真"],
           ["analytic", "Roofline 解析模型"],
-          ["blis", "BLIS 原生离散事件仿真"],
+          ["run", "BLIS 原生运行"],
+          ["replay", "BLIS Trace 回放"],
+          ["observe", "BLIS 实测采集"],
+          ["calibrate", "BLIS 校准报告"],
         ] as Array<[StudioTab, string]>).map(([tab, label]) => (
           <button
             key={tab}
@@ -421,9 +590,9 @@ export function SimulationPage() {
         </>
       )}
 
-      {studioTab === "blis" && (
+      {studioTab === "run" && (
         <>
-          <form className="sim-form elevated-panel" onSubmit={onBLISSubmit}>
+          <form className="sim-form elevated-panel" onSubmit={onRunSubmit}>
             <div className="form-grid">
               <SharedSelectionFields
                 models={models}
@@ -458,12 +627,110 @@ export function SimulationPage() {
               <NumberField label="最大 scheduled tokens" value={nativeMaxScheduled} onChange={setNativeMaxScheduled} min={1} />
               <NumberField label="随机种子" value={nativeSeed} onChange={setNativeSeed} min={1} />
             </div>
+            <div className="advanced-grid">
+              <label className="checkbox-row">
+                <input type="checkbox" checked={flowControlEnabled} onChange={(e) => setFlowControlEnabled(e.target.checked)} />
+                <span>启用 Flow Control</span>
+              </label>
+              <SelectField label="Flow detector" value={flowControlDetector} onChange={setFlowControlDetector} options={["utilization", "concurrency", "never"]} />
+              <SelectField label="Flow dispatch order" value={flowControlDispatchOrder} onChange={setFlowControlDispatchOrder} options={["fifo", "priority", "slo-deadline"]} />
+              <NumberField label="Gateway queue depth" value={flowControlMaxQueueDepth} onChange={setFlowControlMaxQueueDepth} min={0} />
+              <NumberField label="Queue depth threshold" value={flowControlQueueDepthThreshold} onChange={setFlowControlQueueDepthThreshold} min={1} step={0.1} />
+              <NumberField label="KV util threshold" value={flowControlKVThreshold} onChange={setFlowControlKVThreshold} min={0.1} step={0.1} />
+              <NumberField label="Prefill instances" value={prefillInstances} onChange={setPrefillInstances} min={0} />
+              <NumberField label="Decode instances" value={decodeInstances} onChange={setDecodeInstances} min={0} />
+              <NumberField label="Encode instances" value={encodeInstances} onChange={setEncodeInstances} min={0} />
+              <SelectField label="PD decider" value={pdDecider} onChange={setPDDecider} options={["never", "always", "prefix-threshold"]} />
+              <NumberField label="PD prefix threshold" value={pdPrefixThreshold} onChange={setPDPrefixThreshold} min={0} />
+              <SelectField label="Post-hoc saturation" value={postHocDetector} onChange={setPostHocDetector} options={["none", "composite", "threshold"]} />
+              <NumberField label="Saturation threshold (ms)" value={saturationThresholdMs} onChange={setSaturationThresholdMs} min={0} step={1} />
+            </div>
             <button className="primary-btn" type="submit">
               {nativeLoading ? "正在执行 BLIS…" : "运行 BLIS 原生仿真"}
             </button>
           </form>
           {nativeError && <div className="error-panel">BLIS 原生仿真失败：{nativeError}</div>}
           {nativeResult && <BLISResultPanel result={nativeResult} />}
+        </>
+      )}
+
+      {studioTab === "observe" && (
+        <>
+          <form className="sim-form elevated-panel" onSubmit={onObserveSubmit}>
+            <div className="form-grid">
+              <TextField label="服务地址（仅 localhost）" value={observeServerURL} onChange={setObserveServerURL} />
+              <SelectField label="工作负载预设" value={observeWorkloadPreset} onChange={setObserveWorkloadPreset} options={["chatbot", "summarization", "contentgen", "multidoc"]} />
+              <SelectField label="API 格式" value={observeAPIFormat} onChange={setObserveAPIFormat} options={["completions", "chat"]} />
+              <NumberField label="速率 req/s" value={observeRate} onChange={setObserveRate} min={0.1} step={0.1} />
+              <NumberField label="请求数" value={observeNumRequests} onChange={setObserveNumRequests} min={1} />
+              <NumberField label="Prompt tokens" value={observePromptTokens} onChange={setObservePromptTokens} min={1} />
+              <NumberField label="Output tokens" value={observeOutputTokens} onChange={setObserveOutputTokens} min={1} />
+              <NumberField label="Prefix tokens" value={observePrefixTokens} onChange={setObservePrefixTokens} min={0} />
+              <NumberField label="并发虚拟用户" value={observeConcurrency} onChange={setObserveConcurrency} min={0} />
+              <NumberField label="Think time (ms)" value={observeThinkTimeMs} onChange={setObserveThinkTimeMs} min={0} />
+              <NumberField label="RTT (ms)" value={observeRttMs} onChange={setObserveRttMs} min={0} step={0.1} />
+              <NumberField label="超时 (s)" value={observeTimeoutSeconds} onChange={setObserveTimeoutSeconds} min={1} />
+              <TextField label="预热时长（可选，如 60s）" value={observePrewarmDuration} onChange={setObservePrewarmDuration} />
+            </div>
+            <label className="checkbox-row">
+              <input type="checkbox" checked={observeRecordITL} onChange={(e) => setObserveRecordITL(e.target.checked)} />
+              <span>记录 ITL（用于后续 calibrate / goodput 分析）</span>
+            </label>
+            <button className="primary-btn" type="submit">
+              {observeLoading ? "正在采集…" : "运行 BLIS 实测采集"}
+            </button>
+          </form>
+          {observeError && <div className="error-panel">BLIS 实测采集失败：{observeError}</div>}
+          {observeResult && <ObserveResultPanel result={observeResult} />}
+        </>
+      )}
+
+      {studioTab === "replay" && (
+        <>
+          <form className="sim-form elevated-panel" onSubmit={onReplaySubmit}>
+            <div className="form-grid">
+              <TextField label="Trace Header 路径" value={replayTraceHeaderPath} onChange={setReplayTraceHeaderPath} />
+              <TextField label="Trace Data 路径" value={replayTraceDataPath} onChange={setReplayTraceDataPath} />
+              <SelectField label="Session 模式" value={replaySessionMode} onChange={setReplaySessionMode} options={["fixed", "closed-loop"]} />
+              <NumberField label="Think time (ms)" value={replayThinkTimeMs} onChange={setReplayThinkTimeMs} min={0} />
+              <NumberField label="TP" value={nativeTP} onChange={setNativeTP} min={1} />
+              <NumberField label="实例数" value={nativeInstances} onChange={setNativeInstances} min={1} />
+              <NumberField label="KV blocks" value={nativeKVBlocks} onChange={setNativeKVBlocks} min={1024} />
+              <NumberField label="最大运行请求" value={nativeMaxRunning} onChange={setNativeMaxRunning} min={1} />
+              <NumberField label="最大 scheduled tokens" value={nativeMaxScheduled} onChange={setNativeMaxScheduled} min={1} />
+            </div>
+            <button className="primary-btn" type="submit">
+              {replayLoading ? "正在回放…" : "运行 BLIS Trace 回放"}
+            </button>
+          </form>
+          {replayError && <div className="error-panel">BLIS Trace 回放失败：{replayError}</div>}
+          {replayResult && <ReplayResultPanel result={replayResult} />}
+        </>
+      )}
+
+      {studioTab === "calibrate" && (
+        <>
+          <form className="sim-form elevated-panel" onSubmit={onCalibrateSubmit}>
+            <div className="form-grid">
+              <TextField label="Trace Header 路径" value={calibrateTraceHeaderPath} onChange={setCalibrateTraceHeaderPath} />
+              <TextField label="Trace Data 路径" value={calibrateTraceDataPath} onChange={setCalibrateTraceDataPath} />
+              <TextField label="ITL 文件路径（可选）" value={calibrateITLPath} onChange={setCalibrateITLPath} />
+              <NumberField label="Warm-up 排除数" value={calibrateWarmupRequests} onChange={setCalibrateWarmupRequests} min={0} />
+              <NumberField label="网络 RTT (μs)" value={calibrateNetworkRTTUs} onChange={setCalibrateNetworkRTTUs} min={0} />
+              <NumberField label="带宽 Mbps" value={calibrateBandwidthMbps} onChange={setCalibrateBandwidthMbps} min={0} step={0.1} />
+            </div>
+            <TextAreaField
+              label="SimResults JSON（来自 Replay）"
+              value={calibrateSimResultsText}
+              onChange={setCalibrateSimResultsText}
+              rows={12}
+            />
+            <button className="primary-btn" type="submit">
+              {calibrateLoading ? "正在校准…" : "生成 BLIS 校准报告"}
+            </button>
+          </form>
+          {calibrateError && <div className="error-panel">BLIS 校准失败：{calibrateError}</div>}
+          {calibrateResult && <CalibrateResultPanel result={calibrateResult} />}
         </>
       )}
     </div>
@@ -578,6 +845,42 @@ function NumberField({
   );
 }
 
+function TextField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      <span>{label}</span>
+      <input value={value} onChange={(e) => onChange(e.target.value)} />
+    </label>
+  );
+}
+
+function TextAreaField({
+  label,
+  value,
+  onChange,
+  rows,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  rows: number;
+}) {
+  return (
+    <label>
+      <span>{label}</span>
+      <textarea className="text-area-field" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
+    </label>
+  );
+}
+
 function SelectField({
   label,
   value,
@@ -619,7 +922,6 @@ function PlatformResult({ result }: { result: SimulationResponse }) {
         <MetricCard label="吞吐 (tok/s)" value={result.metrics.throughput_tok_s} accent="green" />
         <MetricCard label="E2E (ms)" value={result.metrics.e2e_ms} accent="orange" />
       </div>
-
       <section className="chart-panel">
         <div className="chart-header">
           <h3>最差 / 典型 / 最佳结果对比</h3>
@@ -665,32 +967,6 @@ function PlatformResult({ result }: { result: SimulationResponse }) {
           </ResponsiveContainer>
         </div>
       </section>
-
-      <section className="detail-panel">
-        <h3>当前结果解读</h3>
-        <div className="detail-list">
-          <div className="detail-item">
-            <span>当前组合</span>
-            <strong>
-              {result.selection.model} / {result.selection.hardware} / {result.selection.framework} / {result.selection.scenario}
-            </strong>
-          </div>
-          <div className="detail-item">
-            <span>主要瓶颈</span>
-            <strong>{result.bottleneck}</strong>
-          </div>
-          <div className="detail-item">
-            <span>生效优化</span>
-            <strong className="tag-row">
-              {(result.applied_optimizations ?? []).map((item) => (
-                <span key={item} className="tag">
-                  {item}
-                </span>
-              ))}
-            </strong>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
@@ -706,7 +982,6 @@ function AnalyticPanel({ result }: { result: AnalyticResponse }) {
         <MetricCard label="吞吐 (tok/s)" value={result.estimates.throughput_tok_s} accent="green" />
         <MetricCard label="Ridge point" value={result.roofline.ridge_point} accent="orange" />
       </div>
-
       <section className="library-layout">
         <div className="chart-panel">
           <div className="chart-header">
@@ -728,36 +1003,12 @@ function AnalyticPanel({ result }: { result: AnalyticResponse }) {
         <aside className="detail-panel">
           <h3>Roofline 诊断</h3>
           <div className="detail-list">
-            <div className="detail-item">
-              <span>Prefill bound</span>
-              <strong>{result.roofline.prefill_bound}</strong>
-            </div>
-            <div className="detail-item">
-              <span>Decode bound</span>
-              <strong>{result.roofline.decode_bound}</strong>
-            </div>
-            <div className="detail-item">
-              <span>AI (prefill / decode)</span>
-              <strong>
-                {result.roofline.arithmetic_intensity_pf} / {result.roofline.arithmetic_intensity_dc}
-              </strong>
-            </div>
-            <div className="detail-item">
-              <span>Prefill compute / memory</span>
-              <strong>
-                {result.roofline.prefill_compute_ms} / {result.roofline.prefill_memory_ms} ms
-              </strong>
-            </div>
-            <div className="detail-item">
-              <span>Decode compute / memory</span>
-              <strong>
-                {result.roofline.decode_compute_ms} / {result.roofline.decode_memory_ms} ms
-              </strong>
-            </div>
+            <div className="detail-item"><span>Prefill bound</span><strong>{result.roofline.prefill_bound}</strong></div>
+            <div className="detail-item"><span>Decode bound</span><strong>{result.roofline.decode_bound}</strong></div>
+            <div className="detail-item"><span>AI (prefill / decode)</span><strong>{result.roofline.arithmetic_intensity_pf} / {result.roofline.arithmetic_intensity_dc}</strong></div>
           </div>
         </aside>
       </section>
-
       <section className="chart-panel">
         <div className="chart-header">
           <h3>输出长度对 E2E 的影响</h3>
@@ -788,60 +1039,135 @@ function BLISResultPanel({ result }: { result: BLISNativeResponse }) {
         <MetricCard label="响应数 / 秒" value={result.metrics.responses_per_sec} accent="green" />
         <MetricCard label="Token / 秒" value={result.metrics.tokens_per_sec} accent="orange" />
       </div>
-
       <section className="library-layout">
         <div className="chart-panel">
           <div className="chart-header">
-            <h3>BLIS 原生结果摘要</h3>
-            <span>该结果来自真实 cluster DES + roofline latency backend，而非平台 heuristic 近似。</span>
+            <h3>BLIS 原生运行摘要</h3>
+            <span>结果来自真实 cluster DES + roofline backend。</span>
           </div>
           <div className="blis-summary-grid">
-            <div className="metric-card">
-              <div className="num">{result.metrics.completed_requests}</div>
-              <div>完成请求</div>
-            </div>
-            <div className="metric-card">
-              <div className="num">{result.metrics.injected_requests}</div>
-              <div>注入请求</div>
-            </div>
-            <div className="metric-card">
-              <div className="num">{result.metrics.e2e_p95_ms}</div>
-              <div>E2E p95 (ms)</div>
-            </div>
-            <div className="metric-card">
-              <div className="num">{result.metrics.preemption_count}</div>
-              <div>抢占次数</div>
-            </div>
+            <MetricCard label="完成请求" value={result.metrics.completed_requests} accent="blue" />
+            <MetricCard label="注入请求" value={result.metrics.injected_requests} accent="purple" />
+            <MetricCard label="E2E P95" value={result.metrics.e2e_p95_ms} accent="green" />
+            <MetricCard label="抢占次数" value={result.metrics.preemption_count} accent="orange" />
           </div>
         </div>
         <aside className="detail-panel">
           <h3>校准与说明</h3>
           <div className="detail-list">
-            <div className="detail-item">
-              <span>校准状态</span>
-              <strong>{result.calibration.status}</strong>
-            </div>
-            <div className="detail-item">
-              <span>校准说明</span>
-              <strong>{result.calibration.notes}</strong>
-            </div>
-            <div className="detail-item">
-              <span>仿真配置</span>
-              <strong>
-                {result.selection.model} / {result.selection.hardware} / {result.selection.latency_backend} / TP
-                {result.selection.tp} / {result.selection.num_instances} instances
-              </strong>
-            </div>
-            <div className="detail-item">
-              <span>补充说明</span>
-              <strong className="notes-stack">
-                {result.notes.map((item) => (
-                  <span key={item}>{item}</span>
-                ))}
-              </strong>
-            </div>
+            <div className="detail-item"><span>校准状态</span><strong>{result.calibration.status}</strong></div>
+            <div className="detail-item"><span>校准说明</span><strong>{result.calibration.notes}</strong></div>
+            <div className="detail-item"><span>仿真配置</span><strong>{result.selection.model} / {result.selection.hardware} / TP{result.selection.tp} / {result.selection.num_instances} instances</strong></div>
+            {Boolean(result.saturation) && (
+              <div className="detail-item"><span>饱和度分析</span><strong>{JSON.stringify(result.saturation)}</strong></div>
+            )}
           </div>
         </aside>
+      </section>
+    </div>
+  );
+}
+
+function ObserveResultPanel({ result }: { result: BLISObserveResponse }) {
+  return (
+    <div className="results-block">
+      <div className="card-grid">
+        <MetricCard label="TTFT 均值 (ms)" value={result.metrics.ttft_mean_ms} accent="blue" />
+        <MetricCard label="响应数 / 秒" value={result.metrics.responses_per_sec} accent="purple" />
+        <MetricCard label="Token / 秒" value={result.metrics.tokens_per_sec} accent="green" />
+        <MetricCard label="已注入请求" value={result.metrics.injected_requests} accent="orange" />
+      </div>
+      <section className="library-layout">
+        <div className="detail-panel">
+          <h3>采集产物</h3>
+          <div className="detail-list">
+            <div className="detail-item"><span>Trace Header</span><strong>{result.artifacts.trace_header_path}</strong></div>
+            <div className="detail-item"><span>Trace Data</span><strong>{result.artifacts.trace_data_path}</strong></div>
+            {result.artifacts.itl_path && <div className="detail-item"><span>ITL CSV</span><strong>{result.artifacts.itl_path}</strong></div>}
+          </div>
+        </div>
+        <div className="detail-panel">
+          <h3>命令输出摘要</h3>
+          <pre className="console-preview">{(result.stderr || result.stdout || "无额外输出").slice(0, 4000)}</pre>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ReplayResultPanel({ result }: { result: BLISReplayResponse }) {
+  return (
+    <div className="results-block">
+      <div className="card-grid">
+        <MetricCard label="TTFT 均值 (ms)" value={result.metrics.ttft_mean_ms} accent="blue" />
+        <MetricCard label="TTFT P95 (ms)" value={result.metrics.ttft_p95_ms} accent="purple" />
+        <MetricCard label="响应数 / 秒" value={result.metrics.responses_per_sec} accent="green" />
+        <MetricCard label="SimResults 条目" value={result.sim_results.length} accent="orange" />
+      </div>
+      <section className="detail-panel">
+        <h3>Replay 产物与说明</h3>
+        <div className="detail-list">
+          <div className="detail-item"><span>Trace Header</span><strong>{result.trace.header_path}</strong></div>
+          <div className="detail-item"><span>Trace Data</span><strong>{result.trace.data_path}</strong></div>
+          <div className="detail-item"><span>Session 模式</span><strong>{result.trace.session_mode}</strong></div>
+          <div className="detail-item"><span>补充说明</span><strong className="notes-stack">{result.notes.map((item) => <span key={item}>{item}</span>)}</strong></div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CalibrateResultPanel({ result }: { result: BLISCalibrateResponse }) {
+  const rows = Object.entries(result.report.metrics);
+  return (
+    <div className="results-block">
+      <div className="card-grid">
+        <MetricCard label="匹配对数" value={result.report.trace_info.matched_pairs} accent="blue" />
+        <MetricCard label="Warm-up 排除" value={result.report.trace_info.warm_up_excluded} accent="purple" />
+        <MetricCard label="Token mismatch" value={result.report.trace_info.token_mismatches} accent="green" />
+        <MetricCard label="ITL 丢弃" value={result.report.trace_info.itl_dropped ?? 0} accent="orange" />
+      </div>
+      <section className="chart-panel">
+        <div className="chart-header">
+          <h3>校准指标摘要</h3>
+          <span>展示 real vs sim 的 workload-level 误差和 request-level 质量。</span>
+        </div>
+        <div className="table-panel">
+          <table>
+            <thead>
+              <tr>
+                <th>指标</th>
+                <th>Real Mean</th>
+                <th>Sim Mean</th>
+                <th>MAPE</th>
+                <th>Pearson R</th>
+                <th>Quality</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(([metric, item]) => (
+                <tr key={metric}>
+                  <td>{metric}</td>
+                  <td>{item.workload_level.real_mean.toFixed(2)}</td>
+                  <td>{item.workload_level.sim_mean.toFixed(2)}</td>
+                  <td>{(item.request_level.mape * 100).toFixed(2)}%</td>
+                  <td>{item.request_level.pearson_r.toFixed(3)}</td>
+                  <td>{item.request_level.quality}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="detail-panel">
+        <h3>已知限制</h3>
+        <div className="detail-list">
+          {result.report.known_limitations.map((item) => (
+            <div className="detail-item" key={item}>
+              <strong>{item}</strong>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );

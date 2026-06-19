@@ -32,6 +32,10 @@
 5. **组合仿真系统**：选择四要素后，综合所有可用优化手段，仿真最差/最佳/典型性能并展示所用
    加速手段；支持手动勾选/取消优化手段、清单化管理、同组合不同手段对比、不同组合对比，以及
    针对某结果的全流程性能消耗图形化分解以定位瓶颈。
+6. **BLIS 原生能力复用**：`third_party/inference-sim` 已支持的原生命令与仿真能力（`run / replay / observe / calibrate`、
+   workload synthesis、trace pipeline、routing / scheduling / flow-control / PD / EPD / autoscaling /
+   saturation / goodput 等）必须作为平台正式能力纳入需求范围，并逐步通过 Web UI 呈现，而不是只保留
+   在 CLI 内部。
 
 ## 4. 功能需求
 
@@ -41,6 +45,8 @@
 - 技术栈：React + TypeScript 前端 + Go HTTP API（见架构文档）。
 - 运行方式：支持**一键构建、部署和运行**，自动打开 Web 页面完成配置、仿真和结果查看，并覆盖
   **Ubuntu、Windows、macOS** 三个操作系统。
+- **Web UI 复用目标**：除当前平台组合仿真外，Web 还应逐步提供 BLIS 原生的 `Run / Replay / Observe /
+  Calibrate / Saturation / Trace` 能力入口，形成统一的 Simulation Studio，而不是把这些功能散落在 CLI 中。
 
 ### 4.2 模型库
 - 覆盖分类：LLM、VLM、Omni、语音、Embedding。
@@ -86,6 +92,46 @@
 - 对比：同组合不同手段集合对比；不同组合对比。
 - 诊断：针对某结果，图形化展示推理全流程各段性能消耗，定位瓶颈并给出优化方向。
 
+### 4.9 BLIS 原生仿真能力复用（新增）
+
+> 代码依据：`third_party/inference-sim/cmd/root.go`、`cmd/replay.go`、`cmd/observe_cmd.go`、
+> `cmd/calibrate.go`、`sim/cluster/deployment.go`、`sim/workload/spec.go`、`sim/metrics.go`。
+
+- **4.9.1 Run / Cluster DES**
+  - 平台不仅要支持“平台组合仿真”，还要支持 BLIS 原生 cluster DES 路径；
+  - Web 应可配置模型、硬件、TP、实例数、arrival process、路由策略、调度策略、抢占策略、KV blocks、
+    max running reqs、max scheduled tokens 等核心 run 参数；
+  - 结果应展示完成请求数、TTFT/ITL/E2E 分位数、吞吐、preemption、queue/drop 统计等聚合指标。
+- **4.9.2 Replay / Trace 回放**
+  - 支持导入 TraceV2 header/data 文件，在 Web 中回放真实或生成请求序列；
+  - 支持 fixed / closed-loop 会话模式、think time 配置、trace re-export，以及与 run 路径的策略参数复用。
+- **4.9.3 Observe / Real Server 采集**
+  - 支持将 workload 发送到真实 OpenAI-compatible 服务，记录 TraceV2；
+  - 支持 workload-spec、preset、rate-mode、concurrency-mode、RTT、ITL 录制、prewarm、warmup、goodput SLO。
+- **4.9.4 Calibrate / 仿真校准**
+  - 支持导入 observe 产出的 TraceV2 与 replay 产出的 SimResult，生成 calibration report；
+  - 支持 TTFT / E2E / ITL 误差、warm-up 排除、network RTT/bandwidth 调整、goodput 比较。
+- **4.9.5 Workload 建模**
+  - 支持 open-loop 与 closed-loop 两类 workload；
+  - 到达过程覆盖 `poisson / gamma / weibull / constant`；
+  - 长度分布覆盖 `gaussian / exponential / pareto_lognormal / lognormal / empirical / constant`；
+  - 支持 cohort、diurnal、spike、drain、prefix sharing、multi-turn reasoning、multimodal。
+- **4.9.6 高级 serving 机制**
+  - 支持 weighted routing scorer、prefix cache scorer、gateway flow control、TTL / queue shedding /
+    in-flight eviction、PD disaggregation、EPD encode pool、autoscaler、post-hoc saturation、goodput。
+
+### 4.10 当前实现与目标覆盖矩阵（新增）
+
+| 能力 | 当前代码状态 | Web/UI 状态 | 目标 |
+|------|-------------|------------|------|
+| 四大参考库查询与对比 | 已实现首版（`apiserver/server.go`、`web/src/pages/LibraryPage.tsx`） | 已接入 | 继续扩库到主流开源/闭源模型、硬件、框架、场景 |
+| 解析模型（TTFT/TPOT/roofline/breakdown） | 已实现首版（`apiserver/analytic.go`） | 已接入 | 补公式渲染、动态示意、更多曲线维度 |
+| 性能数据库查询与 benchmark 对照 | 已实现首版（`web/src/pages/PerfDatabasePage.tsx`） | 已接入 | 扩充更多公开组合与过滤维度 |
+| 平台组合仿真 | 已实现首版（`apiserver/simulate.go`、`web/src/pages/SimulationPage.tsx`） | 已接入 | 补更完整的组合-组合对比与图形化瓶颈诊断 |
+| BLIS Native Run | 已实现首版（`apiserver/blis.go`） | 已接入 | 继续扩充更多原生命令参数 |
+| BLIS Replay / Observe / Calibrate | 基座已实现（`cmd/replay.go`、`cmd/observe_cmd.go`、`cmd/calibrate.go`） | **尚未接入 Web** | 必须补齐为 Web 工作台入口 |
+| Flow control / PD / EPD / autoscaler / saturation | 基座已实现（`sim/cluster/*.go`） | **尚未形成完整 Web 控制面** | 必须逐步补齐参数面板、结果视图与 trace 诊断 |
+
 ## 5. 非功能需求与约束
 
 - **基座可独立同步**（硬约束）：BLIS 基座位于 `third_party/inference-sim/`，独立 Go 模块，平台
@@ -99,7 +145,8 @@
 
 - 首期（Ascend + Qwen）：Qwen2.5/3/3.5 dense 文本模型、Ascend 910B/950/310P、vllm-ascend；
   其余厂商/模型/框架以少量种子保证 schema 通用性。
-- 后续：横向扩展模型/硬件/框架覆盖，VL/Omni/MoE/thinking、HCCS 通信与量化保真、自动校准。
+- 后续：横向扩展模型/硬件/框架覆盖，VL/Omni/MoE/thinking、HCCS 通信与量化保真、自动校准，并把
+  BLIS 的 replay / observe / calibrate / advanced cluster controls 全部纳入 Web 工作台。
 
 ## 7. 路线图（阶段）
 
@@ -111,6 +158,7 @@
 | Phase 3 | 性能数据库 | 带完整测试条件的公开数据 + 查询 UI |
 | Phase 4 | 组合仿真 | 优化手段目录 + 最差/最佳/典型 + 对比 + 瀑布分解 |
 | Phase 5 | Ascend 保真 + 泛化 | Ascend 延迟/通信/量化建模、profile 校准、扩库 |
+| Phase 6 | BLIS 全量复用 | Replay / Observe / Calibrate / Trace / Flow-control / PD / EPD / Autoscaler / Saturation Web 化 |
 
 执行以 `docs/issues/` 跟踪。
 
@@ -123,3 +171,4 @@
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | v0.1 | 2026-06-19 | 初稿：依据用户需求与设计报告整理，确立五大功能 + UI + 阶段路线图与基座同步约束。 |
+| v0.2 | 2026-06-19 | 将 `third_party/inference-sim` 的原生命令与高级 cluster 能力纳入正式需求范围，新增 Web 覆盖矩阵与 Phase 6（BLIS 全量复用）。 |

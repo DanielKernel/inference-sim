@@ -17,7 +17,7 @@ func testServer(t *testing.T) *Server {
 	if err != nil {
 		t.Fatalf("loading data: %v", err)
 	}
-	return NewServer(store, "../data", "")
+	return NewServer(store, "../data", "", "..")
 }
 
 func TestHealth(t *testing.T) {

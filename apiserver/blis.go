@@ -9,29 +9,43 @@ import (
 	blissim "github.com/inference-sim/inference-sim/sim"
 	bliscluster "github.com/inference-sim/inference-sim/sim/cluster"
 	blislatency "github.com/inference-sim/inference-sim/sim/latency"
+	blissaturation "github.com/inference-sim/inference-sim/sim/saturation"
 	blisworkload "github.com/inference-sim/inference-sim/sim/workload"
 )
 
 type blisSimulateRequest struct {
-	Model              string  `json:"model"`
-	Hardware           string  `json:"hardware"`
-	Scenario           string  `json:"scenario"`
-	InputTokens        int     `json:"input_tokens"`
-	OutputTokens       int     `json:"output_tokens"`
-	LatencyBackend     string  `json:"latency_backend"`
-	TP                 int     `json:"tp"`
-	NumInstances       int     `json:"num_instances"`
-	Rate               float64 `json:"rate"`
-	NumRequests        int     `json:"num_requests"`
-	HorizonUs          int64   `json:"horizon_us"`
-	ArrivalProcess     string  `json:"arrival_process"`
-	RoutingPolicy      string  `json:"routing_policy"`
-	Scheduler          string  `json:"scheduler"`
-	PreemptionPolicy   string  `json:"preemption_policy"`
-	TotalKVBlocks      int64   `json:"total_kv_blocks"`
-	MaxRunningReqs     int64   `json:"max_running_reqs"`
-	MaxScheduledTokens int64   `json:"max_scheduled_tokens"`
-	Seed               int64   `json:"seed"`
+	Model                           string  `json:"model"`
+	Hardware                        string  `json:"hardware"`
+	Scenario                        string  `json:"scenario"`
+	InputTokens                     int     `json:"input_tokens"`
+	OutputTokens                    int     `json:"output_tokens"`
+	LatencyBackend                  string  `json:"latency_backend"`
+	TP                              int     `json:"tp"`
+	NumInstances                    int     `json:"num_instances"`
+	Rate                            float64 `json:"rate"`
+	NumRequests                     int     `json:"num_requests"`
+	HorizonUs                       int64   `json:"horizon_us"`
+	ArrivalProcess                  string  `json:"arrival_process"`
+	RoutingPolicy                   string  `json:"routing_policy"`
+	Scheduler                       string  `json:"scheduler"`
+	PreemptionPolicy                string  `json:"preemption_policy"`
+	TotalKVBlocks                   int64   `json:"total_kv_blocks"`
+	MaxRunningReqs                  int64   `json:"max_running_reqs"`
+	MaxScheduledTokens              int64   `json:"max_scheduled_tokens"`
+	Seed                            int64   `json:"seed"`
+	FlowControlEnabled              bool    `json:"flow_control_enabled"`
+	FlowControlDetector             string  `json:"flow_control_detector"`
+	FlowControlDispatchOrder        string  `json:"flow_control_dispatch_order"`
+	FlowControlMaxQueueDepth        int     `json:"flow_control_max_queue_depth"`
+	FlowControlQueueDepthThreshold  float64 `json:"flow_control_queue_depth_threshold"`
+	FlowControlKVCacheUtilThreshold float64 `json:"flow_control_kv_cache_util_threshold"`
+	PrefillInstances                int     `json:"prefill_instances"`
+	DecodeInstances                 int     `json:"decode_instances"`
+	EncodeInstances                 int     `json:"encode_instances"`
+	PDDecider                       string  `json:"pd_decider"`
+	PDPrefixThreshold               int     `json:"pd_prefix_threshold"`
+	PostHocDetector                 string  `json:"post_hoc_detector"`
+	SaturationThresholdMs           float64 `json:"saturation_threshold_ms"`
 }
 
 type blisSimulateResponse struct {
@@ -63,7 +77,8 @@ type blisSimulateResponse struct {
 		TimedOutRequests  int     `json:"timed_out_requests"`
 		PreemptionCount   int64   `json:"preemption_count"`
 	} `json:"metrics"`
-	Notes []string `json:"notes"`
+	Saturation any      `json:"saturation,omitempty"`
+	Notes      []string `json:"notes"`
 }
 
 func (s *Server) handleBLISSimulate(w http.ResponseWriter, r *http.Request) {
@@ -134,6 +149,27 @@ func (s *Server) runBLISSimulation(req blisSimulateRequest) (*blisSimulateRespon
 	if req.MaxScheduledTokens <= 0 {
 		req.MaxScheduledTokens = 2048
 	}
+	if req.FlowControlDetector == "" {
+		req.FlowControlDetector = "utilization"
+	}
+	if req.FlowControlDispatchOrder == "" {
+		req.FlowControlDispatchOrder = "fifo"
+	}
+	if req.FlowControlQueueDepthThreshold <= 0 {
+		req.FlowControlQueueDepthThreshold = 5
+	}
+	if req.FlowControlKVCacheUtilThreshold <= 0 {
+		req.FlowControlKVCacheUtilThreshold = 0.8
+	}
+	if req.PDDecider == "" {
+		req.PDDecider = "never"
+	}
+	if req.PostHocDetector == "" {
+		req.PostHocDetector = "none"
+	}
+	if req.SaturationThresholdMs <= 0 {
+		req.SaturationThresholdMs = 5000
+	}
 
 	modelConfig := toBLISModelConfig(model)
 	hwConfig := toBLISHardwareConfig(hw)
@@ -183,18 +219,41 @@ func (s *Server) runBLISSimulation(req blisSimulateRequest) (*blisSimulateRespon
 			PolicyConfig:        blissim.NewPolicyConfig(req.Scheduler, req.PreemptionPolicy),
 			WorkloadConfig:      blissim.NewWorkloadConfig(),
 		},
-		NumInstances:            req.NumInstances,
-		AdmissionPolicy:         "always-admit",
-		RoutingPolicy:           req.RoutingPolicy,
-		SnapshotRefreshInterval: 0,
-		CacheSignalDelay:        bliscluster.DefaultCacheSignalDelay,
+		NumInstances:                    req.NumInstances,
+		AdmissionPolicy:                 "always-admit",
+		RoutingPolicy:                   req.RoutingPolicy,
+		SnapshotRefreshInterval:         0,
+		CacheSignalDelay:                bliscluster.DefaultCacheSignalDelay,
+		FlowControlEnabled:              req.FlowControlEnabled,
+		FlowControlDetector:             req.FlowControlDetector,
+		FlowControlDispatchOrder:        req.FlowControlDispatchOrder,
+		FlowControlMaxQueueDepth:        req.FlowControlMaxQueueDepth,
+		FlowControlQueueDepthThreshold:  req.FlowControlQueueDepthThreshold,
+		FlowControlKVCacheUtilThreshold: req.FlowControlKVCacheUtilThreshold,
+		PrefillInstances:                req.PrefillInstances,
+		DecodeInstances:                 req.DecodeInstances,
+		EncodeInstances:                 req.EncodeInstances,
+		PDDecider:                       req.PDDecider,
+		PDPrefixThreshold:               req.PDPrefixThreshold,
+		PDTransferBandwidthGBps:         25.0,
+		PDTransferBaseLatencyMs:         0.05,
 	}
 
-	cs := bliscluster.NewClusterSimulator(config, requests, nil)
+	var saturationDetector blissim.BatchClassifier
+	if req.PostHocDetector != "none" {
+		saturationDetector = blissaturation.NewDetector(req.PostHocDetector, blissaturation.DetectorOpts{
+			ThresholdMs: req.SaturationThresholdMs,
+		})
+	}
+
+	cs, err := runClusterSafely(config, requests, nil)
+	if err != nil {
+		return nil, err
+	}
 	if err := cs.Run(); err != nil {
 		return nil, fmt.Errorf("running BLIS simulation: %w", err)
 	}
-	output := cs.AggregatedMetrics().BuildOutput("cluster", nil)
+	output := cs.AggregatedMetrics().BuildOutput("cluster", saturationDetector)
 
 	var resp blisSimulateResponse
 	resp.Selection.Model = model.DisplayName
@@ -219,6 +278,7 @@ func (s *Server) runBLISSimulation(req blisSimulateRequest) (*blisSimulateRespon
 	resp.Metrics.DroppedUnservable = output.DroppedUnservable
 	resp.Metrics.TimedOutRequests = output.TimedOutRequests
 	resp.Metrics.PreemptionCount = output.PreemptionCount
+	resp.Saturation = output.Saturation
 	resp.Notes = []string{
 		"该结果由 third_party/inference-sim 的真实 cluster DES 路径生成，而不是平台启发式估算。",
 		"当前硬件校准状态来自 curated 数据中的 calibration 字段；assumed 表示用于 Web 集成的保守近似值。",

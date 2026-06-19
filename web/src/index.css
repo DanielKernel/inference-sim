@@ -35,6 +35,19 @@
   --progress-fill: linear-gradient(90deg, #4c6bff, #59d0ff);
 }
 
+.console-preview {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 360px;
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--panel-border);
+  color: var(--text-primary);
+}
+
 :root[data-theme="dark"] {
   --bg-primary: #09111f;
   --bg-gradient:
@@ -386,12 +399,18 @@ button {
 }
 
 input,
-select {
+select,
+textarea {
   padding: 10px 12px;
   border: 1px solid var(--input-border);
   border-radius: 8px;
   background: var(--input-bg);
   color: var(--text-primary);
+}
+
+.text-area-field {
+  width: 100%;
+  resize: vertical;
 }
 
 input::placeholder {
@@ -411,6 +430,17 @@ input::placeholder {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px dashed rgba(135, 159, 214, 0.35);
+  border-radius: 14px;
+  background: var(--surface-soft);
 }
 
 .checkbox-row {

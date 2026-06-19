@@ -6,20 +6,31 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/DanielKernel/inference-sim-platform/library"
 )
 
 // Server holds the loaded curated data and serves the platform HTTP API.
 type Server struct {
-	store   *library.Store
-	dataDir string
-	webDir  string
+	store           *library.Store
+	dataDir         string
+	webDir          string
+	repoRoot        string
+	artifactsDir    string
+	blisBinaryPath  string
+	blisBinaryBuild sync.Once
+	blisBinaryErr   error
 }
 
 // NewServer constructs a Server over an already-loaded library Store.
-func NewServer(store *library.Store, dataDir, webDir string) *Server {
-	return &Server{store: store, dataDir: dataDir, webDir: webDir}
+func NewServer(store *library.Store, dataDir, webDir, repoRoot string) *Server {
+	return &Server{
+		store:    store,
+		dataDir:  dataDir,
+		webDir:   webDir,
+		repoRoot: repoRoot,
+	}
 }
 
 // Handler returns the root http.Handler with all routes and middleware applied.
@@ -32,6 +43,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/analytic/estimate", s.handleAnalyticEstimate)
 	mux.HandleFunc("POST /api/combosim/simulate", s.handleSimulate)
 	mux.HandleFunc("POST /api/blis/simulate", s.handleBLISSimulate)
+	mux.HandleFunc("POST /api/blis/replay", s.handleBLISReplay)
+	mux.HandleFunc("POST /api/blis/observe", s.handleBLISObserve)
+	mux.HandleFunc("POST /api/blis/calibrate", s.handleBLISCalibrate)
 	mux.HandleFunc("POST /api/simulate", s.handleSimulate)
 	if s.webDir != "" {
 		mux.HandleFunc("GET /", s.handleWeb)

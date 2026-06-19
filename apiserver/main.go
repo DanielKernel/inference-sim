@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/DanielKernel/inference-sim-platform/library"
@@ -26,11 +27,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("apiserver: loading library data from %q: %v", *dataDir, err)
 	}
+	repoRoot, err := filepath.Abs(".")
+	if err != nil {
+		log.Fatalf("apiserver: resolving repo root: %v", err)
+	}
 	log.Printf("apiserver: loaded %d models, %d hardware, %d frameworks, %d scenarios, %d perf records, %d optimizations",
 		len(store.Models), len(store.Hardware), len(store.Frameworks),
 		len(store.Scenarios), len(store.PerfRecords), len(store.Optimizations))
 
-	srv := NewServer(store, *dataDir, *webDir)
+	srv := NewServer(store, *dataDir, *webDir, repoRoot)
 
 	httpSrv := &http.Server{
 		Addr:              *addr,
