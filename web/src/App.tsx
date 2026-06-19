@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
+import { OVERVIEW_TOPICS } from "./content/overviewTopics";
 import { Dashboard } from "./pages/Dashboard";
 import { LibraryPage } from "./pages/LibraryPage";
+import { OverviewTopicPage } from "./pages/OverviewTopicPage";
 import { PerfDatabasePage } from "./pages/PerfDatabasePage";
 import { SimulationPage } from "./pages/SimulationPage";
 
@@ -52,9 +54,18 @@ export function App() {
           </div>
         </div>
         <nav>
-          <NavLink to="/" end>
-            总览
-          </NavLink>
+          <div className="nav-group">
+            <NavLink to="/" end>
+              总览
+            </NavLink>
+            <div className="nav-submenu">
+              {OVERVIEW_TOPICS.map((topic) => (
+                <NavLink key={topic.slug} to={`/overview/${topic.slug}`} className="nav-subitem">
+                  {topic.label}
+                </NavLink>
+              ))}
+            </div>
+          </div>
           <NavLink to="/simulate">仿真工作台</NavLink>
           <NavLink to="/perfdb">性能数据库</NavLink>
           {libs.map((l) => (
@@ -89,6 +100,7 @@ export function App() {
         </header>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/overview/:slug" element={<OverviewTopicPage />} />
           <Route path="/simulate" element={<SimulationPage />} />
           <Route path="/perfdb" element={<PerfDatabasePage />} />
           <Route path="/library/perf_records" element={<PerfDatabasePage />} />

@@ -111,6 +111,12 @@ type blisCalibrateResponse struct {
 	Report *blisworkload.CalibrationReport `json:"report"`
 }
 
+type blisTraceArtifacts struct {
+	TraceHeaderPath string
+	TraceDataPath   string
+	ITLPath         string
+}
+
 func (s *Server) handleBLISReplay(w http.ResponseWriter, r *http.Request) {
 	var req blisReplayRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -154,8 +160,9 @@ func (s *Server) handleBLISCalibrate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) runBLISReplay(req blisReplayRequest) (*blisReplayResponse, error) {
+	req.TraceHeaderPath, req.TraceDataPath = s.resolveBLISTracePaths(req.TraceHeaderPath, req.TraceDataPath)
 	if req.TraceHeaderPath == "" || req.TraceDataPath == "" {
-		return nil, errors.New("trace_header_path and trace_data_path are required")
+		return nil, errors.New("trace_header_path and trace_data_path are required (or run BLIS observe first to reuse the latest trace)")
 	}
 	traceData, err := blisworkload.LoadTraceV2(req.TraceHeaderPath, req.TraceDataPath)
 	if err != nil {
@@ -261,6 +268,11 @@ func (s *Server) runBLISReplay(req blisReplayRequest) (*blisReplayResponse, erro
 	resp.Trace.RequestCount = len(traceData.Records)
 	resp.Metrics = toMetricsSummary(output)
 	resp.SimResults = extractSimResults(cs.AggregatedMetrics())
+	s.rememberBLISTrace(blisTraceArtifacts{
+		TraceHeaderPath: req.TraceHeaderPath,
+		TraceDataPath:   req.TraceDataPath,
+	})
+	s.rememberBLISResults(resp.SimResults)
 	resp.Notes = []string{
 		"Replay 复用了 BLIS TraceV2 装载与 cluster DES 路径。",
 		"如 trace 含 session 轮次，可切换 closed-loop 以使用 SessionManager 驱动后续 follow-up。",
@@ -358,6 +370,11 @@ func (s *Server) runBLISObserve(ctx context.Context, req blisObserveRequest) (*b
 	resp.Metrics = metrics
 	resp.Stdout = stdout
 	resp.Stderr = stderr
+	s.rememberBLISTrace(blisTraceArtifacts{
+		TraceHeaderPath: traceHeader,
+		TraceDataPath:   traceData,
+		ITLPath:         itlOutput,
+	})
 	return &resp, nil
 }
 
@@ -376,8 +393,18 @@ func (s *Server) resolveBLISDefaultsPath() (string, error) {
 }
 
 func (s *Server) runBLISCalibrate(req blisCalibrateRequest) (*blisCalibrateResponse, error) {
+	req.TraceHeaderPath, req.TraceDataPath = s.resolveBLISTracePaths(req.TraceHeaderPath, req.TraceDataPath)
 	if req.TraceHeaderPath == "" || req.TraceDataPath == "" {
-		return nil, errors.New("trace_header_path and trace_data_path are required")
+		return nil, errors.New("trace_header_path and trace_data_path are required (or run BLIS observe first to reuse the latest trace)")
+	}
+	if req.ITLDataPath == "" {
+		req.ITLDataPath = s.latestBLISTrace().ITLPath
+	}
+	if len(req.SimResults) == 0 {
+		req.SimResults = s.latestBLISResults()
+	}
+	if len(req.SimResults) == 0 {
+		return nil, errors.New("sim_results are required (or run BLIS replay first to reuse the latest sim results)")
 	}
 	traceData, err := blisworkload.LoadTraceV2(req.TraceHeaderPath, req.TraceDataPath)
 	if err != nil {
@@ -413,6 +440,47 @@ func (s *Server) runBLISCalibrate(req blisCalibrateRequest) (*blisCalibrateRespo
 		}
 	}
 	return &blisCalibrateResponse{Report: report}, nil
+}
+
+func (s *Server) resolveBLISTracePaths(headerPath, dataPath string) (string, string) {
+	headerPath = strings.TrimSpace(headerPath)
+	dataPath = strings.TrimSpace(dataPath)
+	if headerPath != "" && dataPath != "" {
+		return headerPath, dataPath
+	}
+	latest := s.latestBLISTrace()
+	if headerPath == "" {
+		headerPath = latest.TraceHeaderPath
+	}
+	if dataPath == "" {
+		dataPath = latest.TraceDataPath
+	}
+	return headerPath, dataPath
+}
+
+func (s *Server) rememberBLISTrace(artifacts blisTraceArtifacts) {
+	s.blisStateMu.Lock()
+	defer s.blisStateMu.Unlock()
+	s.lastBLISTrace = artifacts
+}
+
+func (s *Server) latestBLISTrace() blisTraceArtifacts {
+	s.blisStateMu.RLock()
+	defer s.blisStateMu.RUnlock()
+	return s.lastBLISTrace
+}
+
+func (s *Server) rememberBLISResults(results []blisworkload.SimResult) {
+	copied := append([]blisworkload.SimResult(nil), results...)
+	s.blisStateMu.Lock()
+	defer s.blisStateMu.Unlock()
+	s.lastBLISResults = copied
+}
+
+func (s *Server) latestBLISResults() []blisworkload.SimResult {
+	s.blisStateMu.RLock()
+	defer s.blisStateMu.RUnlock()
+	return append([]blisworkload.SimResult(nil), s.lastBLISResults...)
 }
 
 func buildBLISDeploymentConfig(model library.Model, hw library.Hardware, backend string, tp, numInstances int, horizon, seed, totalKVBlocks, maxRunningReqs, maxScheduledTokens int64, scheduler, preemptionPolicy, routingPolicy string) bliscluster.DeploymentConfig {

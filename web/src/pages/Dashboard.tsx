@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, PlatformConfig } from "../api/client";
+import { OVERVIEW_TOPICS } from "../content/overviewTopics";
 
 const FACTORS = [
   {
@@ -129,6 +131,19 @@ export function Dashboard() {
         <div className="info-item">
           <strong>解释优先</strong>
           <span>目标不是只给一个吞吐数字，而是解释模型、硬件、软件与 token 长度如何共同塑造结果。</span>
+        </div>
+      </section>
+
+      <section className="detail-panel">
+        <h3>总览专题子菜单</h3>
+        <div className="overview-topic-grid">
+          {OVERVIEW_TOPICS.map((topic) => (
+            <Link key={topic.slug} to={`/overview/${topic.slug}`} className="overview-topic-card">
+              <div className="eyebrow">{topic.label}</div>
+              <strong>{topic.title}</strong>
+              <p>{topic.summary}</p>
+            </Link>
+          ))}
         </div>
       </section>
 

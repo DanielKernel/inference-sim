@@ -333,11 +333,6 @@ export function SimulationPage() {
     event.preventDefault();
     const traceHeaderPath = normalizedText(replayTraceHeaderPath);
     const traceDataPath = normalizedText(replayTraceDataPath);
-    if (!traceHeaderPath || !traceDataPath) {
-      setReplayResult(null);
-      setReplayError("请先提供 Trace Header 与 Trace Data 路径。");
-      return;
-    }
     setReplayLoading(true);
     setReplayError(null);
     setReplayResult(null);
@@ -375,12 +370,8 @@ export function SimulationPage() {
 
   async function onObserveSubmit(event: FormEvent) {
     event.preventDefault();
-    const serverURL = normalizedText(observeServerURL);
-    if (!serverURL) {
-      setObserveResult(null);
-      setObserveError("请先提供 localhost / 127.0.0.1 服务地址。");
-      return;
-    }
+    const serverURL = normalizedText(observeServerURL) || "http://127.0.0.1:8000";
+    setObserveServerURL(serverURL);
     setObserveLoading(true);
     setObserveError(null);
     setObserveResult(null);
@@ -420,18 +411,15 @@ export function SimulationPage() {
     const traceHeaderPath = normalizedText(calibrateTraceHeaderPath);
     const traceDataPath = normalizedText(calibrateTraceDataPath);
     const itlDataPath = normalizedText(calibrateITLPath);
-    if (!traceHeaderPath || !traceDataPath) {
-      setCalibrateResult(null);
-      setCalibrateError("请先提供 Trace Header 与 Trace Data 路径。");
-      return;
-    }
     setCalibrateLoading(true);
     setCalibrateError(null);
     setCalibrateResult(null);
     try {
-      const parsedSimResults = JSON.parse(calibrateSimResultsText) as SimResult[];
-      if (!Array.isArray(parsedSimResults) || parsedSimResults.length === 0) {
-        throw new Error("SimResults JSON 不能为空，且必须是数组。");
+      const parsedSimResults = normalizedText(calibrateSimResultsText)
+        ? (JSON.parse(calibrateSimResultsText) as SimResult[])
+        : [];
+      if (!Array.isArray(parsedSimResults)) {
+        throw new Error("SimResults JSON 必须是数组。");
       }
       const response = await api.blisCalibrate({
         trace_header_path: traceHeaderPath,
@@ -688,6 +676,7 @@ export function SimulationPage() {
       {studioTab === "observe" && (
         <>
           <form className="sim-form elevated-panel" onSubmit={onObserveSubmit}>
+            <p className="form-note">服务地址留空时默认使用 <code>http://127.0.0.1:8000</code>。</p>
             <div className="form-grid">
               <TextField label="服务地址（仅 localhost）" value={observeServerURL} onChange={setObserveServerURL} />
               <SelectField label="工作负载预设" value={observeWorkloadPreset} onChange={setObserveWorkloadPreset} options={["chatbot", "summarization", "contentgen", "multidoc"]} />
@@ -719,6 +708,7 @@ export function SimulationPage() {
       {studioTab === "replay" && (
         <>
           <form className="sim-form elevated-panel" onSubmit={onReplaySubmit}>
+            <p className="form-note">Trace 路径留空时，会优先复用最近一次 BLIS Observe 生成的产物。</p>
             <div className="form-grid">
               <TextField label="Trace Header 路径" value={replayTraceHeaderPath} onChange={setReplayTraceHeaderPath} />
               <TextField label="Trace Data 路径" value={replayTraceDataPath} onChange={setReplayTraceDataPath} />
@@ -742,6 +732,7 @@ export function SimulationPage() {
       {studioTab === "calibrate" && (
         <>
           <form className="sim-form elevated-panel" onSubmit={onCalibrateSubmit}>
+            <p className="form-note">Trace 路径留空时复用最近一次 Observe 产物；SimResults 留空或传空数组时复用最近一次 Replay 结果。</p>
             <div className="form-grid">
               <TextField label="Trace Header 路径" value={calibrateTraceHeaderPath} onChange={setCalibrateTraceHeaderPath} />
               <TextField label="Trace Data 路径" value={calibrateTraceDataPath} onChange={setCalibrateTraceDataPath} />

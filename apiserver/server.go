@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/DanielKernel/inference-sim-platform/library"
+	blisworkload "github.com/inference-sim/inference-sim/sim/workload"
 )
 
 // Server holds the loaded curated data and serves the platform HTTP API.
@@ -21,6 +22,9 @@ type Server struct {
 	blisBinaryPath  string
 	blisBinaryBuild sync.Once
 	blisBinaryErr   error
+	blisStateMu     sync.RWMutex
+	lastBLISTrace   blisTraceArtifacts
+	lastBLISResults []blisworkload.SimResult
 }
 
 // NewServer constructs a Server over an already-loaded library Store.

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/DanielKernel/inference-sim-platform/library"
+	blisworkload "github.com/inference-sim/inference-sim/sim/workload"
 )
 
 func testServer(t *testing.T) *Server {
@@ -291,5 +292,28 @@ func TestResolveBLISDefaultsPath(t *testing.T) {
 	want := filepath.Join("..", "third_party", "inference-sim", "defaults.yaml")
 	if filepath.Clean(got) != filepath.Clean(want) {
 		t.Fatalf("defaults path = %q, want %q", got, want)
+	}
+}
+
+func TestResolveBLISTracePathsUsesLatestArtifacts(t *testing.T) {
+	srv := testServer(t)
+	srv.rememberBLISTrace(blisTraceArtifacts{
+		TraceHeaderPath: "/tmp/latest.header.yaml",
+		TraceDataPath:   "/tmp/latest.data.csv",
+	})
+	header, data := srv.resolveBLISTracePaths("", "")
+	if header != "/tmp/latest.header.yaml" || data != "/tmp/latest.data.csv" {
+		t.Fatalf("resolved paths = (%q, %q)", header, data)
+	}
+}
+
+func TestRememberBLISResultsCopiesSlice(t *testing.T) {
+	srv := testServer(t)
+	original := []blisworkload.SimResult{{RequestID: 1, TTFT: 10}}
+	srv.rememberBLISResults(original)
+	original[0].TTFT = 99
+	got := srv.latestBLISResults()
+	if len(got) != 1 || got[0].TTFT != 10 {
+		t.Fatalf("latest results = %+v, want preserved copy", got)
 	}
 }
