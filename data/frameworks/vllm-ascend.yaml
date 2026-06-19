@@ -1,10 +1,10 @@
 schema_version: 1
 kind: framework
 provenance:
-  source: "vllm-ascend release notes + Ascend+Qwen design report"
+  source: "vllm-ascend 官方发布说明与 Ascend+Qwen 设计报告"
   url: "https://github.com/vllm-project/vllm-ascend"
   retrieved: "2026-06-19"
-  notes: "Optimization availability reflects v0.21.0rc1 (2026-06-16) per design report timeline."
+  notes: "优化手段可用性以 v0.21.0rc1（2026-06-16）和设计报告时间线为准。"
 items:
   - name: vllm-ascend
     vendor: "vLLM + Huawei"
@@ -14,54 +14,54 @@ items:
     optimizations:
       - name: "Continuous batching"
         category: scheduling
-        description: "Iteration-level scheduling that admits/retires requests per step."
+        description: "按迭代步动态纳入和移出请求的连续批处理调度。"
         available: true
         since_version: "v0.18.0"
         notes: ""
       - name: "Chunked prefill"
         category: scheduling
-        description: "Splits long prefills into chunks to bound TTFT impact on decodes."
+        description: "将长预填充分块，降低其对解码阶段 TTFT 的干扰。"
         available: true
         since_version: "v0.18.0"
         notes: ""
       - name: "Prefix cache"
         category: kv_cache
-        description: "Reuses KV blocks for shared prompt prefixes."
+        description: "对共享前缀提示词复用 KV 块。"
         available: true
         since_version: "v0.19.1rc1"
         notes: ""
       - name: "KV cache Int8"
         category: quantization
-        description: "Int8-quantized KV cache to halve KV bandwidth and raise capacity."
+        description: "通过 Int8 量化 KV Cache，降低 KV 带宽占用并提升容量。"
         available: true
         since_version: "v0.20.2rc1"
-        notes: "CANN 9.0.0 recommended."
+        notes: "推荐搭配 CANN 9.0.0。"
       - name: "Graph mode (ACLGraph)"
         category: graph
-        description: "Captures the execution graph for steady-state speedup; first-run compile cost."
+        description: "通过执行图捕获提升稳态性能，但首次运行会有编译开销。"
         available: true
         since_version: "v0.20.2rc1"
-        notes: "eager/full/piecewise/hybrid variants."
+        notes: "支持 eager / full / piecewise / hybrid 等模式。"
       - name: "FlashComm"
         category: comm
-        description: "Communication-overlap optimization for tensor-parallel collectives."
+        description: "面向张量并行集合通信的通信-计算重叠优化。"
         available: true
         since_version: "v0.19.1rc1"
-        notes: "Moved from env var to AscendConfig in v0.20.2rc1."
+        notes: "从 v0.20.2rc1 起由环境变量迁移到 AscendConfig。"
       - name: "Speculative decoding (Eagle3)"
         category: speculative
-        description: "Draft-and-verify speculative decoding to cut decode steps."
+        description: "通过草稿-校验式投机解码减少解码步数。"
         available: true
         since_version: "v0.19.1rc1"
         notes: ""
       - name: "Prefill/decode disaggregation"
         category: scheduling
-        description: "Separates prefill and decode onto distinct instances (Mooncake connector)."
+        description: "通过 Mooncake connector 将 prefill 和 decode 部署到不同实例。"
         available: true
         since_version: "v0.21.0rc1"
-        notes: "Hybrid PCP/DCP."
+        notes: "支持混合 PCP / DCP。"
     references:
-      - title: "vllm-ascend repository"
+      - title: "vllm-ascend 官方仓库"
         url: "https://github.com/vllm-project/vllm-ascend"
         kind: docs
     tags: [ascend, vllm]

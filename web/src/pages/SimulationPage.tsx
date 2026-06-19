@@ -77,6 +77,10 @@ export function SimulationPage() {
     () => optimizations.filter((opt) => opt.frameworks.includes(framework)),
     [framework, optimizations]
   );
+  const totalTimelineMs =
+    result && result.breakdown.length > 0
+      ? result.breakdown[result.breakdown.length - 1].end_ms
+      : 0;
 
   function toggleOptimization(id: string) {
     setSelectedOptimizations((prev) =>
@@ -328,6 +332,36 @@ export function SimulationPage() {
                 <span className="tag" key={item}>
                   {item}
                 </span>
+              ))}
+            </div>
+          </div>
+
+          <h3>阶段耗时时序图</h3>
+          <div className="timeline-panel">
+            <div className="timeline-axis">
+              <span>0 ms</span>
+              <span>{Math.round(totalTimelineMs / 2)} ms</span>
+              <span>{Math.round(totalTimelineMs)} ms</span>
+            </div>
+            <div className="timeline-lanes">
+              {result.breakdown.map((row) => (
+                <div className="timeline-lane" key={row.stage}>
+                  <div className="timeline-lane-label">
+                    <strong>{row.stage}</strong>
+                    <span>{row.start_ms} - {row.end_ms} ms</span>
+                  </div>
+                  <div className="timeline-track">
+                    <div
+                      className="timeline-bar"
+                      style={{
+                        left: `${(row.start_ms / Math.max(totalTimelineMs, 0.1)) * 100}%`,
+                        width: `${(row.duration_ms / Math.max(totalTimelineMs, 0.1)) * 100}%`,
+                      }}
+                    >
+                      {row.duration_ms} ms
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>

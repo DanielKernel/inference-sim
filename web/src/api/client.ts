@@ -62,6 +62,8 @@ export interface SimulateRequest {
 
 export interface SimulationStage {
   stage: string;
+  start_ms: number;
+  end_ms: number;
   duration_ms: number;
   percent: number;
   description: string;

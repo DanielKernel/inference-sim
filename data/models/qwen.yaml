@@ -1,10 +1,10 @@
 schema_version: 1
 kind: model
 provenance:
-  source: "Qwen technical reports + HuggingFace model configs"
+  source: "Qwen 官方技术报告与模型配置"
   url: "https://github.com/QwenLM/Qwen3"
   retrieved: "2026-06-19"
-  notes: "Tier-A dense text models prioritized per Ascend+Qwen design report."
+  notes: "依据 Ascend+Qwen 设计报告，优先纳入 Tier-A 稠密文本模型。"
 items:
   - name: qwen3-8b
     display_name: "Qwen3-8B"
@@ -24,22 +24,22 @@ items:
       max_seq_len: 32768
       rope_theta: 1000000.0
     key_algorithms:
-      - "GQA (grouped-query attention)"
-      - "RoPE with YaRN scaling for long context"
-      - "Thinking mode (reasoning tokens before answer)"
+      - "GQA（分组查询注意力）"
+      - "面向长上下文的 RoPE + YaRN 缩放"
+      - "Thinking 模式（先生成推理内容再输出答案）"
     quant_support:
       - fp16
       - bf16
       - w8a8
     references:
-      - title: "Qwen3 Technical Report"
+      - title: "Qwen3 官方技术报告"
         url: "https://github.com/QwenLM/Qwen3"
         kind: tech_report
     benchmarks:
       - name: "MMLU"
         metric: "accuracy"
         value: 76.9
-        source: "Qwen3 technical report"
+        source: "Qwen3 官方技术报告"
     tags: [qwen, dense, ascend-tier-a]
   - name: qwen3-32b
     display_name: "Qwen3-32B"
@@ -59,21 +59,21 @@ items:
       max_seq_len: 32768
       rope_theta: 1000000.0
     key_algorithms:
-      - "GQA (grouped-query attention)"
-      - "RoPE with YaRN scaling for long context"
-      - "Thinking mode (reasoning tokens before answer)"
+      - "GQA（分组查询注意力）"
+      - "面向长上下文的 RoPE + YaRN 缩放"
+      - "Thinking 模式（先生成推理内容再输出答案）"
     quant_support:
       - fp16
       - bf16
       - w8a8
       - kv_int8
     references:
-      - title: "Qwen3 Technical Report"
+      - title: "Qwen3 官方技术报告"
         url: "https://github.com/QwenLM/Qwen3"
         kind: tech_report
     benchmarks:
       - name: "MMLU"
         metric: "accuracy"
         value: 82.4
-        source: "Qwen3 technical report"
+        source: "Qwen3 官方技术报告"
     tags: [qwen, dense, ascend-tier-a]

@@ -1,32 +1,104 @@
 schema_version: 1
 kind: perf_record
 provenance:
-  source: "Placeholder seed — to be replaced with cited published measurements in Phase 3"
-  url: ""
+  source: "vllm-ascend 官方仓库公开 benchmark（issue #5591）"
+  url: "https://github.com/vllm-project/vllm-ascend/issues/5591"
   retrieved: "2026-06-19"
-  notes: "Illustrative values only; each production record must carry a real source + date."
+  notes: "以下数据来自官方仓库公开 benchmark 表。issue 公开了 prefill qps 与 prefill TTFT；throughput_tok_s 由公开的 prefill qps × 输入 tokens 推导得到；ITL / E2E 未公开，暂以 0 表示未提供。"
 items:
   - model: qwen3-32b
     hardware: ascend-910b
     framework: vllm-ascend
-    framework_version: "v0.21.0rc1"
-    driver: "CANN 9.0.0"
-    input_tokens: 1024
-    output_tokens: 256
-    batch_size: 16
-    concurrency: 16
-    quantization: w8a8
-    kv_quantization: int8
+    framework_version: "v0.13.0（qwen3 dense tp8 baseline）"
+    driver: "Ascend 910B / allgather 通信 / flashcomm1 + flashcomm2"
+    input_tokens: 4096
+    output_tokens: 0
+    batch_size: 500
+    concurrency: 96
+    quantization: unknown
+    kv_quantization: unknown
+    tp_size: 8
+    pp_size: 1
+    metrics:
+      ttft_ms: 16628.0
+      itl_ms: 0
+      e2e_ms: 0
+      throughput_tok_s: 21995.52
+    test_conditions: "官方 benchmark：910B，allgather 通信，inf rate，concurrency=96，4k * 500 prompts。原始公开值：prefill qps=5.37，prefill TTFT mean=16628 ms，median=17784 ms。throughput_tok_s 由 5.37 * 4096 推导。"
+    source:
+      title: "vllm-ascend 官方 issue #5591 Benchmark results"
+      url: "https://github.com/vllm-project/vllm-ascend/issues/5591"
+      kind: benchmark
+    date: "2026-06-19"
+  - model: qwen3-32b
+    hardware: ascend-910b
+    framework: vllm-ascend
+    framework_version: "v0.13.0（qwen3 dense tp8 dbo）"
+    driver: "Ascend 910B / allgather 通信 / dbo"
+    input_tokens: 4096
+    output_tokens: 0
+    batch_size: 500
+    concurrency: 96
+    quantization: unknown
+    kv_quantization: unknown
+    tp_size: 8
+    pp_size: 1
+    metrics:
+      ttft_ms: 14260.0
+      itl_ms: 0
+      e2e_ms: 0
+      throughput_tok_s: 25108.48
+    test_conditions: "官方 benchmark：910B，allgather 通信，inf rate，concurrency=96，4k * 500 prompts。原始公开值：prefill qps=6.13，prefill TTFT mean=14260 ms，median=15566 ms。throughput_tok_s 由 6.13 * 4096 推导。"
+    source:
+      title: "vllm-ascend 官方 issue #5591 Benchmark results"
+      url: "https://github.com/vllm-project/vllm-ascend/issues/5591"
+      kind: benchmark
+    date: "2026-06-19"
+  - model: qwen3-32b
+    hardware: ascend-910b
+    framework: vllm-ascend
+    framework_version: "v0.13.0（qwen3 dense tp4 dp2 baseline）"
+    driver: "Ascend 910B / allgather 通信 / tp4 dp2 baseline"
+    input_tokens: 8192
+    output_tokens: 0
+    batch_size: 500
+    concurrency: 96
+    quantization: unknown
+    kv_quantization: unknown
     tp_size: 4
     pp_size: 1
     metrics:
-      ttft_ms: 180.0
-      itl_ms: 22.0
-      e2e_ms: 5800.0
-      throughput_tok_s: 720.0
-    test_conditions: "Synthetic Poisson workload, QPS 6.45, graph mode hybrid."
+      ttft_ms: 36983.0
+      itl_ms: 0
+      e2e_ms: 0
+      throughput_tok_s: 19415.04
+    test_conditions: "官方 benchmark：910B，allgather 通信，inf rate，concurrency=96，8k * 500 prompts。原始公开值：prefill qps=2.37，prefill TTFT mean=36983 ms，median=39962 ms。throughput_tok_s 由 2.37 * 8192 推导。"
     source:
-      title: "Illustrative placeholder"
-      url: ""
+      title: "vllm-ascend 官方 issue #5591 Benchmark results"
+      url: "https://github.com/vllm-project/vllm-ascend/issues/5591"
       kind: benchmark
-    date: "2026-06-16"
+    date: "2026-06-19"
+  - model: qwen3-32b
+    hardware: ascend-910b
+    framework: vllm-ascend
+    framework_version: "v0.13.0（qwen3 dense tp4 dp2 dbo）"
+    driver: "Ascend 910B / allgather 通信 / tp4 dp2 dbo"
+    input_tokens: 8192
+    output_tokens: 0
+    batch_size: 500
+    concurrency: 96
+    quantization: unknown
+    kv_quantization: unknown
+    tp_size: 4
+    pp_size: 1
+    metrics:
+      ttft_ms: 32707.0
+      itl_ms: 0
+      e2e_ms: 0
+      throughput_tok_s: 21463.04
+    test_conditions: "官方 benchmark：910B，allgather 通信，inf rate，concurrency=96，8k * 500 prompts。原始公开值：prefill qps=2.62，prefill TTFT mean=32707 ms，median=35430 ms。throughput_tok_s 由 2.62 * 8192 推导。"
+    source:
+      title: "vllm-ascend 官方 issue #5591 Benchmark results"
+      url: "https://github.com/vllm-project/vllm-ascend/issues/5591"
+      kind: benchmark
+    date: "2026-06-19"

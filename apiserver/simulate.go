@@ -22,6 +22,8 @@ type simulateRequest struct {
 
 type stageBreakdown struct {
 	Stage       string  `json:"stage"`
+	StartMs     float64 `json:"start_ms"`
+	EndMs       float64 `json:"end_ms"`
 	DurationMs  float64 `json:"duration_ms"`
 	Percent     float64 `json:"percent"`
 	Description string  `json:"description"`
@@ -141,34 +143,67 @@ func buildBreakdown(ttftMs, tpotMs float64, outputTokens int, bottleneck string)
 	decodeTotal := tpotMs * float64(outputTokens)
 	total := ttftMs + decodeTotal
 
-	commShare := 0.10
-	kvShare := 0.10
 	if bottleneck == "显存/内存带宽" {
-		commShare = 0.08
-		kvShare = 0.21
+		prefillParts := []struct {
+			stage, desc string
+			duration    float64
+		}{
+			{"预填充-矩阵计算", "预填充阶段的 QKV、投影和 FFN 稠密计算。", ttftMs * 0.44},
+			{"预填充-注意力", "输入序列上的注意力与上下文聚合。", ttftMs * 0.31},
+			{"预填充-并行通信", "预填充中的张量并行同步与跨卡通信。", ttftMs * 0.10},
+			{"预填充-调度整理", "批次整理、KV 组织和执行前准备。", ttftMs * 0.15},
+		}
+		decodeParts := []struct {
+			stage, desc string
+			duration    float64
+		}{
+			{"解码-KV读取", "长上下文下 KV Cache 读取占比较高。", decodeTotal * 0.34},
+			{"解码-注意力", "逐 Token 注意力更新。", decodeTotal * 0.27},
+			{"解码-FFN", "逐 Token 的 FFN / MLP 计算。", decodeTotal * 0.22},
+			{"解码-采样后处理", "采样、终止判断与响应封装。", decodeTotal * 0.17},
+		}
+		return timelineFromParts(total, append(prefillParts, decodeParts...))
 	}
 
-	parts := []struct {
+	prefillParts := []struct {
 		stage, desc string
 		duration    float64
 	}{
-		{"预填充-QKV-FFN", "预填充阶段的稠密矩阵乘与投影计算。", ttftMs * 0.42},
-		{"预填充-注意力", "输入序列上的提示词注意力计算。", ttftMs * 0.28},
-		{"解码-KV读取", "解码阶段对 KV Cache 的读取。", decodeTotal * kvShare},
-		{"解码-注意力", "逐 Token 的注意力与 score/value 更新。", decodeTotal * 0.26},
-		{"解码-FFN", "逐 Token 的 FFN / MLP 层计算。", decodeTotal * 0.19},
-		{"并行通信", "张量并行与同步带来的通信开销。", (ttftMs + decodeTotal) * commShare},
-		{"采样与后处理", "采样、Token 后处理与响应封装。", (ttftMs + decodeTotal) * 0.05},
+		{"预填充-矩阵计算", "预填充阶段的 QKV、投影和 FFN 稠密计算。", ttftMs * 0.46},
+		{"预填充-注意力", "输入序列上的注意力与上下文聚合。", ttftMs * 0.30},
+		{"预填充-并行通信", "预填充中的张量并行同步与跨卡通信。", ttftMs * 0.09},
+		{"预填充-调度整理", "批次整理、KV 组织和执行前准备。", ttftMs * 0.15},
 	}
+	decodeParts := []struct {
+		stage, desc string
+		duration    float64
+	}{
+		{"解码-KV读取", "解码阶段 KV Cache 读取。", decodeTotal * 0.18},
+		{"解码-注意力", "逐 Token 注意力与 score/value 更新。", decodeTotal * 0.34},
+		{"解码-FFN", "逐 Token 的 FFN / MLP 计算。", decodeTotal * 0.30},
+		{"解码-采样后处理", "采样、终止判断与响应封装。", decodeTotal * 0.18},
+	}
+	return timelineFromParts(total, append(prefillParts, decodeParts...))
+}
 
+func timelineFromParts(total float64, parts []struct {
+	stage, desc string
+	duration    float64
+}) []stageBreakdown {
 	out := make([]stageBreakdown, 0, len(parts))
+	cursor := 0.0
 	for _, p := range parts {
+		start := cursor
+		end := cursor + p.duration
 		out = append(out, stageBreakdown{
 			Stage:       p.stage,
+			StartMs:     round2(start),
+			EndMs:       round2(end),
 			DurationMs:  round2(p.duration),
 			Percent:     round2((p.duration / math.Max(total, 0.1)) * 100),
 			Description: p.desc,
 		})
+		cursor = end
 	}
 	return out
 }

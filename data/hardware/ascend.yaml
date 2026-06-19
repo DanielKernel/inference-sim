@@ -1,10 +1,10 @@
 schema_version: 1
 kind: hardware
 provenance:
-  source: "Huawei Ascend public specs + Ascend+Qwen design report"
+  source: "华为 Ascend 官方规格与 Ascend+Qwen 设计报告"
   url: "https://www.hiascend.com"
   retrieved: "2026-06-19"
-  notes: "FP16-equivalent compute; HCCS interconnect per design report (3 links/NPU, 90 GB/s, 4P full mesh)."
+  notes: "算力使用 FP16 等效口径；HCCS 互联参数依据设计报告（每 NPU 3 条链路、单链路 90 GB/s、4P 全互联）。"
 items:
   - name: ascend-910b
     vendor: Huawei
@@ -24,7 +24,7 @@ items:
       topology: "4p_full_mesh"
     supported_dtypes: [fp16, bf16, int8]
     references:
-      - title: "Ascend 910B product page"
+      - title: "Ascend 910B 官方产品页"
         url: "https://www.hiascend.com"
         kind: docs
     tags: [ascend, npu]
@@ -46,7 +46,7 @@ items:
       topology: "8p_full_mesh"
     supported_dtypes: [fp16, bf16, fp8, int8]
     references:
-      - title: "Ascend 950 announcement"
+      - title: "Ascend 950 官方发布页"
         url: "https://www.hiascend.com"
         kind: docs
     tags: [ascend, npu, "2026"]
@@ -68,7 +68,7 @@ items:
       topology: "none"
     supported_dtypes: [fp16, int8]
     references:
-      - title: "Ascend 310P product page"
+      - title: "Ascend 310P 官方产品页"
         url: "https://www.hiascend.com"
         kind: docs
     tags: [ascend, npu, edge]

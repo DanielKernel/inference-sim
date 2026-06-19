@@ -1,43 +1,43 @@
 schema_version: 1
 kind: scenario
 provenance:
-  source: "Common LLM serving workload profiles"
+  source: "常见大模型服务工作负载画像"
   url: ""
   retrieved: "2026-06-19"
-  notes: "Typical ISL/OSL combinations for mainstream application scenarios."
+  notes: "面向主流应用场景的典型输入/输出 Token 规模组合。"
 items:
   - name: chatbot
     category: conversational
-    description: "Interactive multi-turn chat with short prompts and moderate answers."
+    description: "短提示词、适中回答长度的交互式多轮对话。"
     input_tokens: { typical: 512, min: 64, max: 4096 }
     output_tokens: { typical: 256, min: 32, max: 1024 }
-    examples: ["customer support", "general assistant"]
+    examples: ["客服助手", "通用问答助手"]
     tags: [interactive, low-latency]
   - name: rag
     category: retrieval_augmented
-    description: "Retrieval-augmented generation with large retrieved context."
+    description: "带大段检索上下文的检索增强生成。"
     input_tokens: { typical: 4096, min: 1024, max: 16384 }
     output_tokens: { typical: 512, min: 128, max: 2048 }
-    examples: ["doc QA", "knowledge base assistant"]
+    examples: ["文档问答", "知识库助手"]
     tags: [long-context, prefill-heavy]
   - name: summarization
     category: summarization
-    description: "Condense a long document into a short summary."
+    description: "将长文档压缩为较短摘要。"
     input_tokens: { typical: 8192, min: 2048, max: 32768 }
     output_tokens: { typical: 256, min: 64, max: 1024 }
-    examples: ["meeting notes", "article digest"]
+    examples: ["会议纪要", "文章摘要"]
     tags: [prefill-heavy]
   - name: code-generation
     category: code
-    description: "Generate or complete code from an instruction and context."
+    description: "根据指令与上下文生成代码或完成补全。"
     input_tokens: { typical: 1024, min: 128, max: 8192 }
     output_tokens: { typical: 512, min: 64, max: 4096 }
-    examples: ["IDE completion", "agentic coding"]
+    examples: ["IDE 补全", "智能体编程"]
     tags: [balanced]
   - name: reasoning
     category: reasoning
-    description: "Chain-of-thought reasoning with long generated output (thinking mode)."
+    description: "带较长推理过程输出的 reasoning / thinking 场景。"
     input_tokens: { typical: 1024, min: 256, max: 8192 }
     output_tokens: { typical: 2048, min: 512, max: 8192 }
-    examples: ["math", "agent planning"]
+    examples: ["数学推理", "Agent 规划"]
     tags: [decode-heavy, thinking]

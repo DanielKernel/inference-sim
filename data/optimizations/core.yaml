@@ -1,17 +1,17 @@
 schema_version: 1
 kind: optimization
 provenance:
-  source: "Inference framework optimization survey + Ascend+Qwen design report"
+  source: "推理框架优化手段调研与 Ascend+Qwen 设计报告"
   url: ""
   retrieved: "2026-06-19"
-  notes: "Effect factors are first-order modeling estimates, refined in later phases by calibration."
+  notes: "当前效果因子为一阶估算值，后续通过校准数据进一步修正。"
 items:
   - id: paged-kv-cache
     name: "Paged KV cache"
     category: kv_cache
-    description: "Block-based KV allocation to eliminate fragmentation and raise effective capacity."
+    description: "基于块的 KV 分配方式，减少碎片并提升有效容量。"
     frameworks: [vllm, vllm-ascend, sglang, trt-llm]
-    applicability: "Always applicable for autoregressive decode."
+    applicability: "适用于自回归解码场景。"
     latency_factor: 1.0
     throughput_factor: 1.3
     memory_factor: 0.7
@@ -21,9 +21,9 @@ items:
   - id: chunked-prefill
     name: "Chunked prefill"
     category: scheduling
-    description: "Split long prefills into chunks to reduce decode TTFT interference."
+    description: "将长预填充分块，降低其对解码阶段 TTFT 的影响。"
     frameworks: [vllm, vllm-ascend, sglang]
-    applicability: "Beneficial when prefill and decode share an instance."
+    applicability: "当 prefill 与 decode 共用实例时收益较高。"
     latency_factor: 1.05
     throughput_factor: 1.1
     memory_factor: 1.0
@@ -33,9 +33,9 @@ items:
   - id: prefix-cache
     name: "Prefix cache"
     category: kv_cache
-    description: "Reuse KV for shared prompt prefixes to skip recomputation."
+    description: "对共享提示词前缀复用 KV，避免重复计算。"
     frameworks: [vllm, vllm-ascend, sglang, xllm]
-    applicability: "High-impact when prompts share long common prefixes."
+    applicability: "当提示词共享较长公共前缀时收益明显。"
     latency_factor: 0.7
     throughput_factor: 1.4
     memory_factor: 1.0
@@ -45,9 +45,9 @@ items:
   - id: kv-int8
     name: "KV cache Int8"
     category: quantization
-    description: "Int8-quantized KV cache halves KV read bandwidth in decode."
+    description: "使用 Int8 量化 KV Cache，降低解码阶段 KV 读取带宽。"
     frameworks: [vllm-ascend, trt-llm]
-    applicability: "Memory-bound decode with large active context."
+    applicability: "适合长上下文、显存/带宽受限的解码场景。"
     latency_factor: 0.8
     throughput_factor: 1.2
     memory_factor: 0.5
@@ -57,9 +57,9 @@ items:
   - id: speculative-decoding
     name: "Speculative decoding"
     category: speculative
-    description: "Draft small model proposes tokens; target verifies in parallel."
+    description: "草稿模型先提议 Token，目标模型并行校验。"
     frameworks: [vllm, vllm-ascend, sglang, trt-llm]
-    applicability: "Decode-bound workloads with predictable text."
+    applicability: "适合解码受限且输出模式较稳定的场景。"
     latency_factor: 0.6
     throughput_factor: 1.8
     memory_factor: 1.1
@@ -69,9 +69,9 @@ items:
   - id: graph-mode
     name: "Graph mode (CUDA/ACL graph)"
     category: graph
-    description: "Capture execution graph for steady-state kernel-launch savings."
+    description: "通过执行图捕获减少稳态阶段的 kernel launch 开销。"
     frameworks: [vllm-ascend, trt-llm]
-    applicability: "Steady-state decode with stable shapes; first-run compile cost."
+    applicability: "适合形状较稳定的稳态解码；首次运行会产生编译开销。"
     latency_factor: 0.85
     throughput_factor: 1.15
     memory_factor: 1.0
