@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { Dashboard } from "./pages/Dashboard";
 import { LibraryPage } from "./pages/LibraryPage";
@@ -12,7 +13,34 @@ const libs: { kind: string; label: string }[] = [
   { kind: "perf_records", label: "性能数据库" },
 ];
 
+type ThemeMode = "system" | "light" | "dark";
+
 export function App() {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    const saved = window.localStorage.getItem("theme-mode");
+    return saved === "light" || saved === "dark" || saved === "system" ? saved : "system";
+  });
+  const [systemDark, setSystemDark] = useState(() =>
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const listener = (event: MediaQueryListEvent) => setSystemDark(event.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, []);
+
+  const activeTheme = useMemo(
+    () => (themeMode === "system" ? (systemDark ? "dark" : "light") : themeMode),
+    [themeMode, systemDark]
+  );
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = activeTheme;
+    window.localStorage.setItem("theme-mode", themeMode);
+  }, [activeTheme, themeMode]);
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -36,6 +64,28 @@ export function App() {
         </nav>
       </aside>
       <main className="content">
+        <header className="topbar">
+          <div>
+            <div className="eyebrow">设计升级</div>
+            <strong>跟随系统主题 + 可手动切换</strong>
+          </div>
+          <div className="theme-switcher" role="group" aria-label="主题切换">
+            {([
+              ["system", "跟随系统"],
+              ["light", "浅色"],
+              ["dark", "深色"],
+            ] as Array<[ThemeMode, string]>).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                className={`theme-pill ${themeMode === mode ? "active" : ""}`}
+                onClick={() => setThemeMode(mode)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </header>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/simulate" element={<SimulationPage />} />

@@ -112,6 +112,9 @@ export function LibraryPage() {
   useEffect(() => {
     setError(null);
     setRows([]);
+    setQuery("");
+    setFilterValue("全部");
+    setSelectedRow(null);
     api
       .library<Row>(kind)
       .then(setRows)
