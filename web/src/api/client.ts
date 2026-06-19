@@ -386,9 +386,28 @@ function buildPath(path: string, params?: object) {
 async function getJSON<T>(path: string): Promise<T> {
   const res = await fetch(path);
   if (!res.ok) {
-    throw new Error(`${path}: HTTP ${res.status}`);
+    throw new Error(await buildAPIError(path, res));
   }
   return (await res.json()) as T;
+}
+
+async function buildAPIError(path: string, res: Response): Promise<string> {
+  const fallback = `${path}: HTTP ${res.status}`;
+  const contentType = res.headers.get("content-type") ?? "";
+  try {
+    if (contentType.includes("application/json")) {
+      const payload = (await res.json()) as { error?: string; message?: string };
+      const message = payload.error ?? payload.message;
+      if (message) {
+        return `${path}: ${message}`;
+      }
+      return fallback;
+    }
+    const text = (await res.text()).trim();
+    return text ? `${fallback} - ${text}` : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 async function postJSON<TReq, TResp>(path: string, body: TReq): Promise<TResp> {
@@ -398,7 +417,7 @@ async function postJSON<TReq, TResp>(path: string, body: TReq): Promise<TResp> {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    throw new Error(`${path}: HTTP ${res.status}`);
+    throw new Error(await buildAPIError(path, res));
   }
   return (await res.json()) as TResp;
 }

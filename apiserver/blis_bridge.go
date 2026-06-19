@@ -311,7 +311,12 @@ func (s *Server) runBLISObserve(ctx context.Context, req blisObserveRequest) (*b
 		"--timeout", strconv.Itoa(req.TimeoutSeconds),
 	}
 	if req.WorkloadPreset != "" {
+		defaultsPath, err := s.resolveBLISDefaultsPath()
+		if err != nil {
+			return nil, err
+		}
 		args = append(args, "--workload", req.WorkloadPreset)
+		args = append(args, "--defaults-filepath", defaultsPath)
 	}
 	if req.Rate > 0 {
 		args = append(args, "--rate", fmt.Sprintf("%g", req.Rate))
@@ -354,6 +359,20 @@ func (s *Server) runBLISObserve(ctx context.Context, req blisObserveRequest) (*b
 	resp.Stdout = stdout
 	resp.Stderr = stderr
 	return &resp, nil
+}
+
+func (s *Server) resolveBLISDefaultsPath() (string, error) {
+	candidates := []string{
+		filepath.Join(s.repoRoot, "third_party", "inference-sim", "defaults.yaml"),
+		filepath.Join(s.repoRoot, "defaults.yaml"),
+	}
+	for _, candidate := range candidates {
+		info, err := os.Stat(candidate)
+		if err == nil && !info.IsDir() {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("BLIS defaults.yaml not found; checked %s", strings.Join(candidates, ", "))
 }
 
 func (s *Server) runBLISCalibrate(req blisCalibrateRequest) (*blisCalibrateResponse, error) {

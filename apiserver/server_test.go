@@ -281,3 +281,15 @@ func TestBLISSimulate(t *testing.T) {
 		t.Fatal("expected calibration status")
 	}
 }
+
+func TestResolveBLISDefaultsPath(t *testing.T) {
+	srv := testServer(t)
+	got, err := srv.resolveBLISDefaultsPath()
+	if err != nil {
+		t.Fatalf("resolveBLISDefaultsPath: %v", err)
+	}
+	want := filepath.Join("..", "third_party", "inference-sim", "defaults.yaml")
+	if filepath.Clean(got) != filepath.Clean(want) {
+		t.Fatalf("defaults path = %q, want %q", got, want)
+	}
+}

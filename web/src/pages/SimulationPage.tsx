@@ -66,6 +66,10 @@ function normalizeSimulationResponse(resp: SimulationResponse): SimulationRespon
   };
 }
 
+function normalizedText(value: string): string {
+  return value.trim();
+}
+
 export function SimulationPage() {
   const [studioTab, setStudioTab] = useState<StudioTab>("platform");
   const [models, setModels] = useState<ModelEntry[]>([]);
@@ -327,12 +331,20 @@ export function SimulationPage() {
 
   async function onReplaySubmit(event: FormEvent) {
     event.preventDefault();
+    const traceHeaderPath = normalizedText(replayTraceHeaderPath);
+    const traceDataPath = normalizedText(replayTraceDataPath);
+    if (!traceHeaderPath || !traceDataPath) {
+      setReplayResult(null);
+      setReplayError("请先提供 Trace Header 与 Trace Data 路径。");
+      return;
+    }
     setReplayLoading(true);
     setReplayError(null);
+    setReplayResult(null);
     try {
       const response = await api.blisReplay({
-        trace_header_path: replayTraceHeaderPath,
-        trace_data_path: replayTraceDataPath,
+        trace_header_path: traceHeaderPath,
+        trace_data_path: traceDataPath,
         model,
         hardware: device,
         latency_backend: nativeBackend,
@@ -363,11 +375,18 @@ export function SimulationPage() {
 
   async function onObserveSubmit(event: FormEvent) {
     event.preventDefault();
+    const serverURL = normalizedText(observeServerURL);
+    if (!serverURL) {
+      setObserveResult(null);
+      setObserveError("请先提供 localhost / 127.0.0.1 服务地址。");
+      return;
+    }
     setObserveLoading(true);
     setObserveError(null);
+    setObserveResult(null);
     try {
       const response = await api.blisObserve({
-        server_url: observeServerURL,
+        server_url: serverURL,
         model,
         workload_preset: observeWorkloadPreset,
         rate: observeRate,
@@ -398,18 +417,30 @@ export function SimulationPage() {
 
   async function onCalibrateSubmit(event: FormEvent) {
     event.preventDefault();
+    const traceHeaderPath = normalizedText(calibrateTraceHeaderPath);
+    const traceDataPath = normalizedText(calibrateTraceDataPath);
+    const itlDataPath = normalizedText(calibrateITLPath);
+    if (!traceHeaderPath || !traceDataPath) {
+      setCalibrateResult(null);
+      setCalibrateError("请先提供 Trace Header 与 Trace Data 路径。");
+      return;
+    }
     setCalibrateLoading(true);
     setCalibrateError(null);
+    setCalibrateResult(null);
     try {
       const parsedSimResults = JSON.parse(calibrateSimResultsText) as SimResult[];
+      if (!Array.isArray(parsedSimResults) || parsedSimResults.length === 0) {
+        throw new Error("SimResults JSON 不能为空，且必须是数组。");
+      }
       const response = await api.blisCalibrate({
-        trace_header_path: calibrateTraceHeaderPath,
-        trace_data_path: calibrateTraceDataPath,
+        trace_header_path: traceHeaderPath,
+        trace_data_path: traceDataPath,
         sim_results: parsedSimResults,
         warm_up_requests: calibrateWarmupRequests,
         network_rtt_us: calibrateNetworkRTTUs,
         bandwidth_mbps: calibrateBandwidthMbps,
-        itl_data_path: calibrateITLPath || undefined,
+        itl_data_path: itlDataPath || undefined,
       });
       setCalibrateResult(response);
     } catch (err) {
