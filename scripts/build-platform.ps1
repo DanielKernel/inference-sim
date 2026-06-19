@@ -12,7 +12,7 @@ $ApiExe = Join-Path $BinDir "apiserver.exe"
 Write-Host ">> Building Go API server"
 go build -o "$ApiExe" ./apiserver
 if (-not (Test-Path $ApiExe)) {
-    throw "构建完成后未找到 API 可执行文件：$ApiExe"
+    throw "API executable was not found after build: $ApiExe"
 }
 
 Write-Host ">> Building web app"
@@ -30,4 +30,4 @@ finally {
 Write-Host ""
 Write-Host "Build complete:"
 Write-Host "  API: $ApiExe"
-Write-Host "  Web: $Root\web\dist"
+Write-Host "  Web: $(Join-Path (Join-Path $Root 'web') 'dist')"

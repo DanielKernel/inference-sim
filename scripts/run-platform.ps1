@@ -14,17 +14,23 @@ $WebDir = Join-Path (Join-Path $Root "web") "dist"
 Write-Host ">> Starting platform server on $Addr"
 $proc = $null
 if (Test-Path $ApiExe) {
-    $proc = Start-Process -FilePath "$ApiExe" `
-        -ArgumentList @("--addr", $Addr, "--data", $DataDir, "--web-dir", $WebDir) `
-        -WorkingDirectory $Root `
-        -PassThru
+    $startArgs = @{
+        FilePath = $ApiExe
+        ArgumentList = @("--addr", $Addr, "--data", $DataDir, "--web-dir", $WebDir)
+        WorkingDirectory = $Root
+        PassThru = $true
+    }
+    $proc = Start-Process @startArgs
 }
 else {
-    Write-Warning "未找到 $ApiExe，回退到 'go run ./apiserver' 方式启动。"
-    $proc = Start-Process -FilePath "go" `
-        -ArgumentList @("run", "./apiserver", "--addr", $Addr, "--data", $DataDir, "--web-dir", $WebDir) `
-        -WorkingDirectory $Root `
-        -PassThru
+    Write-Warning "API executable was not found at $ApiExe. Falling back to 'go run ./apiserver'."
+    $startArgs = @{
+        FilePath = "go"
+        ArgumentList = @("run", "./apiserver", "--addr", $Addr, "--data", $DataDir, "--web-dir", $WebDir)
+        WorkingDirectory = $Root
+        PassThru = $true
+    }
+    $proc = Start-Process @startArgs
 }
 
 try {
@@ -42,7 +48,7 @@ try {
     }
 
     if (-not $healthy) {
-        throw "platform server failed to become healthy at $Url"
+        throw "Platform server failed to become healthy at $Url"
     }
 
     Write-Host ">> Opening browser: $Url"
