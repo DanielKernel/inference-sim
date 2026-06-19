@@ -7,6 +7,10 @@ cd "$ROOT"
 
 mkdir -p .bin
 
+echo ">> Cleaning previous build artifacts"
+rm -f .bin/apiserver .bin/apiserver.exe
+rm -rf web/dist
+
 "$ROOT/scripts/download-go-deps.sh"
 
 echo ">> Building Go API server"

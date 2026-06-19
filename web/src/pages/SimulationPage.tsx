@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   api,
   FrameworkEntry,
@@ -125,12 +124,9 @@ export function SimulationPage() {
         items: safeBreakdown.filter((step) => step.lane === lane),
       })).filter((group) => group.items.length > 0)
     : [];
-  const profileChartData = safeProfiles.map((profile) => ({
-    name: profile.label,
-    TTFT: profile.metrics.ttft_ms,
-    TPOT: profile.metrics.tpot_ms,
-    吞吐: profile.metrics.throughput_tok_s,
-  }));
+  const maxProfileTTFT = safeProfiles.reduce((max, profile) => Math.max(max, profile.metrics.ttft_ms), 0);
+  const maxProfileTPOT = safeProfiles.reduce((max, profile) => Math.max(max, profile.metrics.tpot_ms), 0);
+  const maxProfileThroughput = safeProfiles.reduce((max, profile) => Math.max(max, profile.metrics.throughput_tok_s), 0);
 
   function toggleOptimization(id: string) {
     setSelectedOptimizations((prev) =>
@@ -471,21 +467,55 @@ export function SimulationPage() {
           <div className="chart-panel">
             <div className="chart-header">
               <h3>三档结果图形化对比</h3>
-              <span>用于快速观察不同优化组合对 TTFT、TPOT 与吞吐的影响</span>
+              <span>使用纯页面图形条展示 TTFT、TPOT 与吞吐，避免图表组件导致结果区白屏。</span>
             </div>
-            <div className="chart-wrap">
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={profileChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
-                  <XAxis dataKey="name" stroke="currentColor" />
-                  <YAxis stroke="currentColor" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="TTFT" fill="#4c6bff" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="TPOT" fill="#7f56d9" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="吞吐" fill="#16a34a" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="profile-compare-list">
+              {safeProfiles.map((profile) => (
+                <div className="profile-compare-row" key={profile.label}>
+                  <div className="profile-compare-title">
+                    <strong>{profile.label}</strong>
+                    <span>{profile.description}</span>
+                  </div>
+                  <div className="compare-metric-stack">
+                    <div className="compare-metric-item">
+                      <div className="compare-metric-head">
+                        <span>TTFT</span>
+                        <strong>{profile.metrics.ttft_ms} ms</strong>
+                      </div>
+                      <div className="compare-bar-track">
+                        <div
+                          className="compare-bar fill-blue"
+                          style={{ width: `${(profile.metrics.ttft_ms / Math.max(maxProfileTTFT, 0.1)) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="compare-metric-item">
+                      <div className="compare-metric-head">
+                        <span>TPOT</span>
+                        <strong>{profile.metrics.tpot_ms} ms</strong>
+                      </div>
+                      <div className="compare-bar-track">
+                        <div
+                          className="compare-bar fill-purple"
+                          style={{ width: `${(profile.metrics.tpot_ms / Math.max(maxProfileTPOT, 0.1)) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="compare-metric-item">
+                      <div className="compare-metric-head">
+                        <span>吞吐</span>
+                        <strong>{profile.metrics.throughput_tok_s} tok/s</strong>
+                      </div>
+                      <div className="compare-bar-track">
+                        <div
+                          className="compare-bar fill-green"
+                          style={{ width: `${(profile.metrics.throughput_tok_s / Math.max(maxProfileThroughput, 0.1)) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

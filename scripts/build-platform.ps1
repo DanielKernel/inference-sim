@@ -3,9 +3,20 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $Root
 
+Write-Host ">> Cleaning previous build artifacts"
+$BinDir = Join-Path $Root ".bin"
+if (Test-Path (Join-Path $BinDir "apiserver.exe")) {
+    Remove-Item (Join-Path $BinDir "apiserver.exe") -Force
+}
+if (Test-Path (Join-Path $BinDir "apiserver")) {
+    Remove-Item (Join-Path $BinDir "apiserver") -Force
+}
+if (Test-Path (Join-Path (Join-Path $Root "web") "dist")) {
+    Remove-Item (Join-Path (Join-Path $Root "web") "dist") -Recurse -Force
+}
+
 & (Join-Path $PSScriptRoot "download-go-deps.ps1")
 
-$BinDir = Join-Path $Root ".bin"
 if (-not (Test-Path $BinDir)) {
     New-Item -ItemType Directory -Path $BinDir | Out-Null
 }
