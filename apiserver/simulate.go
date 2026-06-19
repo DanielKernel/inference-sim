@@ -106,21 +106,32 @@ func (s *Server) simulate(req simulateRequest) (*simulateResponse, error) {
 	if !ok {
 		return nil, errBadInput("unknown framework", req.Framework)
 	}
-	sc, ok := findByName(s.store.Scenarios, req.Scenario, func(s library.Scenario) string { return s.Name })
-	if !ok {
-		return nil, errBadInput("unknown scenario", req.Scenario)
+	var sc library.Scenario
+	if req.Scenario != "" {
+		var ok bool
+		sc, ok = findByName(s.store.Scenarios, req.Scenario, func(s library.Scenario) string { return s.Name })
+		if !ok {
+			return nil, errBadInput("unknown scenario", req.Scenario)
+		}
 	}
 
 	inputTokens := req.InputTokens
 	if inputTokens <= 0 {
+		if req.Scenario == "" {
+			return nil, errBadInput("invalid token lengths", "input_tokens must be > 0 when scenario is empty")
+		}
 		inputTokens = sc.InputTokens.Typical
 	}
 	outputTokens := req.OutputTokens
 	if outputTokens <= 0 {
-		outputTokens = sc.OutputTokens.Typical
+		if req.Scenario == "" {
+			outputTokens = 0
+		} else {
+			outputTokens = sc.OutputTokens.Typical
+		}
 	}
-	if inputTokens <= 0 || outputTokens <= 0 {
-		return nil, errBadInput("invalid token lengths", "input/output tokens must be > 0")
+	if inputTokens <= 0 || outputTokens < 0 {
+		return nil, errBadInput("invalid token lengths", "input_tokens must be > 0 and output_tokens must be >= 0")
 	}
 
 	applicable := applicableOptimizations(s.store.Optimizations, fw.Name)
@@ -136,7 +147,7 @@ func (s *Server) simulate(req simulateRequest) (*simulateResponse, error) {
 	resp.Selection.Model = model.DisplayName
 	resp.Selection.Hardware = hw.Name
 	resp.Selection.Framework = fw.Name
-	resp.Selection.Scenario = sc.Name
+	resp.Selection.Scenario = req.Scenario
 	resp.Selection.RuntimeVersion = req.RuntimeVersion
 	resp.Selection.CANNVersion = req.CANNVersion
 	resp.Selection.GraphMode = req.GraphMode

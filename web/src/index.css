@@ -465,6 +465,10 @@ input::placeholder {
   padding: 8px 0;
 }
 
+.compare-actions {
+  margin-top: 16px;
+}
+
 .table-panel {
   overflow: hidden;
 }
@@ -599,6 +603,22 @@ input::placeholder {
 .chart-wrap {
   width: 100%;
   height: 320px;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 18px;
+}
+
+.compare-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.library-full-span {
+  grid-column: 1 / -1;
 }
 
 .empty-state {
@@ -861,6 +881,10 @@ input::placeholder {
   }
 
   .profile-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-grid {
     grid-template-columns: 1fr;
   }
 }
