@@ -22,7 +22,7 @@ function normalizeSimulationResponse(resp: SimulationResponse): SimulationRespon
   const appliedOptimizations = resp.applied_optimizations ?? [];
   const breakdown = resp.breakdown ?? [];
   const notes = resp.notes ?? [];
-  const profiles =
+  const rawProfiles =
     resp.profiles && resp.profiles.length > 0
       ? resp.profiles
       : [
@@ -35,6 +35,20 @@ function normalizeSimulationResponse(resp: SimulationResponse): SimulationRespon
             breakdown,
           },
         ];
+  const profiles = rawProfiles.map((profile) => ({
+    ...profile,
+    label: profile.label ?? "结果",
+    description: profile.description ?? "",
+    metrics: {
+      ttft_ms: profile.metrics?.ttft_ms ?? 0,
+      tpot_ms: profile.metrics?.tpot_ms ?? 0,
+      e2e_ms: profile.metrics?.e2e_ms ?? 0,
+      throughput_tok_s: profile.metrics?.throughput_tok_s ?? 0,
+    },
+    applied_optimizations: profile.applied_optimizations ?? [],
+    bottleneck: profile.bottleneck ?? "未识别",
+    breakdown: profile.breakdown ?? [],
+  }));
 
   return {
     ...resp,
