@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/DanielKernel/inference-sim-platform/library"
 )
@@ -27,6 +28,7 @@ type simulateRequest struct {
 
 type stageBreakdown struct {
 	Stage       string  `json:"stage"`
+	Lane        string  `json:"lane"`
 	StartMs     float64 `json:"start_ms"`
 	EndMs       float64 `json:"end_ms"`
 	DurationMs  float64 `json:"duration_ms"`
@@ -58,6 +60,23 @@ type simulateResponse struct {
 	AppliedOptimizations []string         `json:"applied_optimizations"`
 	Breakdown            []stageBreakdown `json:"breakdown"`
 	Notes                []string         `json:"notes"`
+	Profiles             []resultProfile  `json:"profiles"`
+}
+
+type resultProfile struct {
+	Label                string           `json:"label"`
+	Description          string           `json:"description"`
+	Metrics              profileMetrics   `json:"metrics"`
+	AppliedOptimizations []string         `json:"applied_optimizations"`
+	Bottleneck           string           `json:"bottleneck"`
+	Breakdown            []stageBreakdown `json:"breakdown"`
+}
+
+type profileMetrics struct {
+	TTFTms         float64 `json:"ttft_ms"`
+	TPOTms         float64 `json:"tpot_ms"`
+	E2Ems          float64 `json:"e2e_ms"`
+	ThroughputTokS float64 `json:"throughput_tok_s"`
 }
 
 func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +125,38 @@ func (s *Server) simulate(req simulateRequest) (*simulateResponse, error) {
 
 	applicable := applicableOptimizations(s.store.Optimizations, fw.Name)
 	applied := chooseOptimizations(applicable, req.AutoOptimize, req.SelectedOptimizations)
+	primary, notes := buildResultProfile("当前结果", "按照当前选择的优化集合仿真。", req, model, hw, fw.Name, outputTokens, inputTokens, applicable, applied)
+
+	typicalApplied := chooseTypicalOptimizations(applicable)
+	worst, _ := buildResultProfile("最差", "关闭额外优化手段，仅保留基础运行路径。", req, model, hw, fw.Name, outputTokens, inputTokens, applicable, nil)
+	typical, _ := buildResultProfile("典型", "采用常见且相对稳妥的主流优化组合。", req, model, hw, fw.Name, outputTokens, inputTokens, applicable, typicalApplied)
+	best, _ := buildResultProfile("最佳", "启用当前框架适用的全部优化手段。", req, model, hw, fw.Name, outputTokens, inputTokens, applicable, chooseOptimizations(applicable, true, nil))
+
+	var resp simulateResponse
+	resp.Selection.Model = model.DisplayName
+	resp.Selection.Hardware = hw.Name
+	resp.Selection.Framework = fw.Name
+	resp.Selection.Scenario = sc.Name
+	resp.Selection.RuntimeVersion = req.RuntimeVersion
+	resp.Selection.CANNVersion = req.CANNVersion
+	resp.Selection.GraphMode = req.GraphMode
+	resp.Selection.QuantMode = req.QuantMode
+	resp.Selection.CommMode = req.CommMode
+	resp.Selection.InputTokens = inputTokens
+	resp.Selection.OutputTokens = outputTokens
+	resp.Metrics.TTFTms = primary.Metrics.TTFTms
+	resp.Metrics.TPOTms = primary.Metrics.TPOTms
+	resp.Metrics.E2Ems = primary.Metrics.E2Ems
+	resp.Metrics.ThroughputTokS = primary.Metrics.ThroughputTokS
+	resp.Bottleneck = primary.Bottleneck
+	resp.AppliedOptimizations = primary.AppliedOptimizations
+	resp.Breakdown = primary.Breakdown
+	resp.Notes = notes
+	resp.Profiles = []resultProfile{worst, typical, best}
+	return &resp, nil
+}
+
+func buildResultProfile(label, description string, req simulateRequest, model library.Model, hw library.Hardware, framework string, outputTokens, inputTokens int, applicable map[string]library.Optimization, applied []string) (resultProfile, []string) {
 	latencyFactor, throughputFactor, notes := combineOptimizationEffects(applicable, applied)
 	latencyFactor, throughputFactor, notes = applyRuntimeProfileAdjustments(req, latencyFactor, throughputFactor, notes)
 
@@ -130,29 +181,25 @@ func (s *Server) simulate(req simulateRequest) (*simulateResponse, error) {
 		notes = append(notes, "大模型张量并行通信开销不可忽略，互联效率可能改变最终瓶颈。")
 	}
 
-	breakdown := buildBreakdown(ttftMs, tpotMs, outputTokens, bottleneck)
+	return resultProfile{
+		Label:                label,
+		Description:          description,
+		Metrics:              profileMetrics{TTFTms: ttftMs, TPOTms: tpotMs, E2Ems: e2eMs, ThroughputTokS: throughputTokS},
+		AppliedOptimizations: applied,
+		Bottleneck:           bottleneck,
+		Breakdown:            buildBreakdown(ttftMs, tpotMs, outputTokens, bottleneck),
+	}, notes
+}
 
-	var resp simulateResponse
-	resp.Selection.Model = model.DisplayName
-	resp.Selection.Hardware = hw.Name
-	resp.Selection.Framework = fw.Name
-	resp.Selection.Scenario = sc.Name
-	resp.Selection.RuntimeVersion = req.RuntimeVersion
-	resp.Selection.CANNVersion = req.CANNVersion
-	resp.Selection.GraphMode = req.GraphMode
-	resp.Selection.QuantMode = req.QuantMode
-	resp.Selection.CommMode = req.CommMode
-	resp.Selection.InputTokens = inputTokens
-	resp.Selection.OutputTokens = outputTokens
-	resp.Metrics.TTFTms = ttftMs
-	resp.Metrics.TPOTms = tpotMs
-	resp.Metrics.E2Ems = e2eMs
-	resp.Metrics.ThroughputTokS = throughputTokS
-	resp.Bottleneck = bottleneck
-	resp.AppliedOptimizations = applied
-	resp.Breakdown = breakdown
-	resp.Notes = notes
-	return &resp, nil
+func chooseTypicalOptimizations(applicable map[string]library.Optimization) []string {
+	preferred := []string{"paged-kv-cache", "chunked-prefill", "prefix-cache", "graph-mode"}
+	out := make([]string, 0, len(preferred))
+	for _, id := range preferred {
+		if _, ok := applicable[id]; ok {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func buildBreakdown(ttftMs, tpotMs float64, outputTokens int, bottleneck string) []stageBreakdown {
@@ -211,8 +258,17 @@ func timelineFromParts(total float64, parts []struct {
 	for _, p := range parts {
 		start := cursor
 		end := cursor + p.duration
+		lane := "解码"
+		if strings.HasPrefix(p.stage, "预填充") {
+			lane = "预填充"
+		} else if strings.Contains(p.stage, "通信") {
+			lane = "通信"
+		} else if strings.Contains(p.stage, "采样") || strings.Contains(p.stage, "后处理") {
+			lane = "后处理"
+		}
 		out = append(out, stageBreakdown{
 			Stage:       p.stage,
+			Lane:        lane,
 			StartMs:     round2(start),
 			EndMs:       round2(end),
 			DurationMs:  round2(p.duration),

@@ -11,6 +11,9 @@ items:
     framework: vllm-ascend
     framework_version: "v0.13.0（qwen3 dense tp8 baseline）"
     driver: "Ascend 910B / allgather 通信 / flashcomm1 + flashcomm2"
+    source_authority: "官方公开数据"
+    metric_coverage: "TTFT、prefill qps 为官方直接公开；throughput_tok_s 为基于官方数据推导；ITL / E2E 官方未提供。"
+    derived_metrics: ["throughput_tok_s"]
     input_tokens: 4096
     output_tokens: 0
     batch_size: 500
@@ -35,6 +38,9 @@ items:
     framework: vllm-ascend
     framework_version: "v0.13.0（qwen3 dense tp8 dbo）"
     driver: "Ascend 910B / allgather 通信 / dbo"
+    source_authority: "官方公开数据"
+    metric_coverage: "TTFT、prefill qps 为官方直接公开；throughput_tok_s 为基于官方数据推导；ITL / E2E 官方未提供。"
+    derived_metrics: ["throughput_tok_s"]
     input_tokens: 4096
     output_tokens: 0
     batch_size: 500
@@ -59,6 +65,9 @@ items:
     framework: vllm-ascend
     framework_version: "v0.13.0（qwen3 dense tp4 dp2 baseline）"
     driver: "Ascend 910B / allgather 通信 / tp4 dp2 baseline"
+    source_authority: "官方公开数据"
+    metric_coverage: "TTFT、prefill qps 为官方直接公开；throughput_tok_s 为基于官方数据推导；ITL / E2E 官方未提供。"
+    derived_metrics: ["throughput_tok_s"]
     input_tokens: 8192
     output_tokens: 0
     batch_size: 500
@@ -83,6 +92,9 @@ items:
     framework: vllm-ascend
     framework_version: "v0.13.0（qwen3 dense tp4 dp2 dbo）"
     driver: "Ascend 910B / allgather 通信 / tp4 dp2 dbo"
+    source_authority: "官方公开数据"
+    metric_coverage: "TTFT、prefill qps 为官方直接公开；throughput_tok_s 为基于官方数据推导；ITL / E2E 官方未提供。"
+    derived_metrics: ["throughput_tok_s"]
     input_tokens: 8192
     output_tokens: 0
     batch_size: 500

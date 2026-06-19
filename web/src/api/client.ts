@@ -67,6 +67,7 @@ export interface SimulateRequest {
 
 export interface SimulationStage {
   stage: string;
+  lane: string;
   start_ms: number;
   end_ms: number;
   duration_ms: number;
@@ -98,6 +99,19 @@ export interface SimulationResponse {
   applied_optimizations: string[];
   breakdown: SimulationStage[];
   notes: string[];
+  profiles: Array<{
+    label: string;
+    description: string;
+    metrics: {
+      ttft_ms: number;
+      tpot_ms: number;
+      e2e_ms: number;
+      throughput_tok_s: number;
+    };
+    applied_optimizations: string[];
+    bottleneck: string;
+    breakdown: SimulationStage[];
+  }>;
 }
 
 async function getJSON<T>(path: string): Promise<T> {

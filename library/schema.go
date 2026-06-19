@@ -190,6 +190,9 @@ type PerfRecord struct {
 	Framework        string      `json:"framework" yaml:"framework"`
 	FrameworkVersion string      `json:"framework_version" yaml:"framework_version"`
 	Driver           string      `json:"driver" yaml:"driver"` // e.g. CANN 9.0.0 / CUDA 12.4
+	SourceAuthority  string      `json:"source_authority" yaml:"source_authority"`
+	MetricCoverage   string      `json:"metric_coverage" yaml:"metric_coverage"`
+	DerivedMetrics   []string    `json:"derived_metrics" yaml:"derived_metrics"`
 	InputTokens      int         `json:"input_tokens" yaml:"input_tokens"`
 	OutputTokens     int         `json:"output_tokens" yaml:"output_tokens"`
 	BatchSize        int         `json:"batch_size" yaml:"batch_size"`

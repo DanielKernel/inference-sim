@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   api,
   FrameworkEntry,
@@ -87,6 +88,18 @@ export function SimulationPage() {
     result && result.breakdown.length > 0
       ? result.breakdown[result.breakdown.length - 1].end_ms
       : 0;
+  const timelineLanes = result
+    ? ["预填充", "解码", "通信", "后处理"].map((lane) => ({
+        lane,
+        items: result.breakdown.filter((step) => step.lane === lane),
+      })).filter((group) => group.items.length > 0)
+    : [];
+  const profileChartData = result?.profiles.map((profile) => ({
+    name: profile.label,
+    TTFT: profile.metrics.ttft_ms,
+    TPOT: profile.metrics.tpot_ms,
+    吞吐: profile.metrics.throughput_tok_s,
+  })) ?? [];
 
   function toggleOptimization(id: string) {
     setSelectedOptimizations((prev) =>
@@ -396,6 +409,55 @@ export function SimulationPage() {
             </div>
           </div>
 
+          <h3>最差 / 典型 / 最佳 对比</h3>
+          <div className="profile-card-grid">
+            {result.profiles.map((profile) => (
+              <div className="profile-card" key={profile.label}>
+                <div className="eyebrow">{profile.label}</div>
+                <strong>{profile.description}</strong>
+                <div className="profile-metrics">
+                  <span>TTFT：{profile.metrics.ttft_ms} ms</span>
+                  <span>TPOT：{profile.metrics.tpot_ms} ms</span>
+                  <span>E2E：{profile.metrics.e2e_ms} ms</span>
+                  <span>吞吐：{profile.metrics.throughput_tok_s} tok/s</span>
+                </div>
+                <p>瓶颈：{profile.bottleneck}</p>
+                <div className="tag-row">
+                  {profile.applied_optimizations.length > 0 ? (
+                    profile.applied_optimizations.map((item) => (
+                      <span className="tag" key={item}>
+                        {item}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="tag">无额外优化</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="chart-panel">
+            <div className="chart-header">
+              <h3>三档结果图形化对比</h3>
+              <span>用于快速观察不同优化组合对 TTFT、TPOT 与吞吐的影响</span>
+            </div>
+            <div className="chart-wrap">
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={profileChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
+                  <XAxis dataKey="name" stroke="currentColor" />
+                  <YAxis stroke="currentColor" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="TTFT" fill="#4c6bff" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="TPOT" fill="#7f56d9" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="吞吐" fill="#16a34a" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
           <h3>阶段耗时时序图</h3>
           <div className="timeline-panel">
             <div className="timeline-axis">
@@ -404,22 +466,29 @@ export function SimulationPage() {
               <span>{Math.round(totalTimelineMs)} ms</span>
             </div>
             <div className="timeline-lanes">
-              {result.breakdown.map((row) => (
-                <div className="timeline-lane" key={row.stage}>
-                  <div className="timeline-lane-label">
-                    <strong>{row.stage}</strong>
-                    <span>{row.start_ms} - {row.end_ms} ms</span>
-                  </div>
-                  <div className="timeline-track">
-                    <div
-                      className="timeline-bar"
-                      style={{
-                        left: `${(row.start_ms / Math.max(totalTimelineMs, 0.1)) * 100}%`,
-                        width: `${(row.duration_ms / Math.max(totalTimelineMs, 0.1)) * 100}%`,
-                      }}
-                    >
-                      {row.duration_ms} ms
-                    </div>
+              {timelineLanes.map((group) => (
+                <div className="timeline-swimlane" key={group.lane}>
+                  <div className="timeline-swimlane-title">{group.lane}</div>
+                  <div className="timeline-swimlane-rows">
+                    {group.items.map((row) => (
+                      <div className="timeline-lane" key={row.stage}>
+                        <div className="timeline-lane-label">
+                          <strong>{row.stage}</strong>
+                          <span>{row.start_ms} - {row.end_ms} ms</span>
+                        </div>
+                        <div className="timeline-track">
+                          <div
+                            className="timeline-bar"
+                            style={{
+                              left: `${(row.start_ms / Math.max(totalTimelineMs, 0.1)) * 100}%`,
+                              width: `${(row.duration_ms / Math.max(totalTimelineMs, 0.1)) * 100}%`,
+                            }}
+                          >
+                            {row.duration_ms} ms
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
