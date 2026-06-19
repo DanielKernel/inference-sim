@@ -96,10 +96,10 @@ export interface SimulationResponse {
     throughput_tok_s: number;
   };
   bottleneck: string;
-  applied_optimizations: string[];
-  breakdown: SimulationStage[];
-  notes: string[];
-  profiles: Array<{
+  applied_optimizations?: string[];
+  breakdown?: SimulationStage[];
+  notes?: string[];
+  profiles?: Array<{
     label: string;
     description: string;
     metrics: {

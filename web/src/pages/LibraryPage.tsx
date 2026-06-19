@@ -1,41 +1,9 @@
 import { useEffect, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useParams } from "react-router-dom";
-import { api, SimulationResponse } from "../api/client";
+import { api } from "../api/client";
 
 type Row = Record<string, unknown>;
-type PerfRow = {
-  model: string;
-  hardware: string;
-  framework: string;
-  framework_version: string;
-  driver: string;
-  source_authority: string;
-  metric_coverage: string;
-  derived_metrics: string[];
-  input_tokens: number;
-  output_tokens: number;
-  batch_size: number;
-  concurrency: number;
-  quantization: string;
-  kv_quantization: string;
-  metrics: {
-    ttft_ms: number;
-    itl_ms: number;
-    e2e_ms: number;
-    throughput_tok_s: number;
-  };
-  test_conditions: string;
-  source: {
-    title: string;
-    url: string;
-    kind: string;
-  };
-  date: string;
-};
 
-// scalarColumns picks displayable (string/number/boolean) top-level fields so the
-// generic table stays readable. Nested objects/arrays are summarized in Phase 1.
 function scalarColumns(rows: Row[]): string[] {
   const cols: string[] = [];
   for (const row of rows) {
@@ -75,10 +43,6 @@ function columnLabel(col: string): string {
       return "FP16 算力";
     case "memory_bandwidth_tbs":
       return "带宽(TB/s)";
-    case "source_authority":
-      return "数据权威性";
-    case "metric_coverage":
-      return "指标覆盖说明";
     case "framework_version":
       return "框架版本";
     default:
@@ -112,17 +76,6 @@ function displayValue(value: unknown): string {
 }
 
 function renderDetailValue(key: string, value: unknown) {
-  if (key === "metrics" && value && typeof value === "object") {
-    const metrics = value as Record<string, unknown>;
-    return (
-      <strong className="metric-inline-list">
-        <span>TTFT: {displayValue(metrics.ttft_ms)} ms</span>
-        <span>ITL: {displayValue(metrics.itl_ms)} ms</span>
-        <span>E2E: {displayValue(metrics.e2e_ms)} ms</span>
-        <span>吞吐: {displayValue(metrics.throughput_tok_s)} tok/s</span>
-      </strong>
-    );
-  }
   if (key === "source" && value && typeof value === "object") {
     const source = value as { title?: string; url?: string };
     return (
@@ -136,17 +89,6 @@ function renderDetailValue(key: string, value: unknown) {
             </a>
           </>
         ) : null}
-      </strong>
-    );
-  }
-  if (key === "derived_metrics" && Array.isArray(value)) {
-    return (
-      <strong className="tag-row">
-        {value.map((item) => (
-          <span className="tag" key={String(item)}>
-            {String(item)}
-          </span>
-        ))}
       </strong>
     );
   }
@@ -169,14 +111,14 @@ function filterLabel(kind: string, key: string): string {
   return "筛选项";
 }
 
-function preferredFilterKey(kind: string, rows: Row[]): string | null {
+function preferredFilterKey(rows: Row[]): string | null {
   const candidates = ["category", "vendor", "developer", "device_type"];
   for (const key of candidates) {
     if (rows.some((row) => typeof row[key] === "string" && String(row[key]).length > 0)) {
       return key;
     }
   }
-  return kind === "perf_records" ? "framework" : null;
+  return null;
 }
 
 export function LibraryPage() {
@@ -195,14 +137,17 @@ export function LibraryPage() {
     setSelectedRow(null);
     api
       .library<Row>(kind)
-      .then(setRows)
+      .then((data) => {
+        setRows(data);
+        setSelectedRow(data[0] ?? null);
+      })
       .catch((e) => setError(String(e)));
   }, [kind]);
 
   if (error) return <p>加载库数据失败：{error}</p>;
 
   const cols = scalarColumns(rows);
-  const filterKey = preferredFilterKey(kind, rows);
+  const filterKey = preferredFilterKey(rows);
   const filterOptions = filterKey
     ? ["全部", ...new Set(rows.map((row) => String(row[filterKey] ?? "")).filter(Boolean))]
     : ["全部"];
@@ -215,284 +160,87 @@ export function LibraryPage() {
       : true;
     return matchesQuery && matchesFilter;
   });
+
   const heroTitle =
     kind === "models"
       ? "模型库"
       : kind === "hardware"
-      ? "硬件库"
-      : kind === "frameworks"
-        ? "框架库"
-        : kind === "scenarios"
-          ? "场景库"
-          : kind === "optimizations"
-            ? "优化手段库"
-            : "性能数据库";
+        ? "硬件库"
+        : kind === "frameworks"
+          ? "框架库"
+          : kind === "scenarios"
+            ? "场景库"
+            : "优化手段库";
 
   return (
     <div className="page-stack">
       <section className="hero-panel">
-      <div>
-        <div className="eyebrow">参考库查询</div>
-        <h2>{heroTitle}</h2>
-        <p>支持关键字检索、分类筛选、结果浏览与明细查看。</p>
-      </div>
-      <div className="hero-stats">
-        <div className="mini-stat">
-          <strong>{rows.length}</strong>
-          <span>总记录数</span>
+        <div>
+          <div className="eyebrow">参考库查询</div>
+          <h2>{heroTitle}</h2>
+          <p>支持关键字检索、分类筛选、结果浏览与明细查看。</p>
         </div>
-        <div className="mini-stat">
-          <strong>{filteredRows.length}</strong>
-          <span>当前命中</span>
+        <div className="hero-stats">
+          <div className="mini-stat">
+            <strong>{rows.length}</strong>
+            <span>总记录数</span>
+          </div>
+          <div className="mini-stat">
+            <strong>{filteredRows.length}</strong>
+            <span>当前命中</span>
+          </div>
         </div>
-      </div>
       </section>
 
       <section className="toolbar-panel">
-      <label className="toolbar-field">
-        <span>关键字查询</span>
-        <input
-          placeholder="输入名称、厂商、类别、版本、说明等关键字"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </label>
-      {filterKey && (
         <label className="toolbar-field">
-          <span>{filterLabel(kind, filterKey)}</span>
-          <select value={filterValue} onChange={(e) => setFilterValue(e.target.value)}>
-            {filterOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <span>关键字查询</span>
+          <input
+            placeholder="输入名称、厂商、类别、版本、说明等关键字"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </label>
-      )}
+        {filterKey && (
+          <label className="toolbar-field">
+            <span>{filterLabel(kind, filterKey)}</span>
+            <select value={filterValue} onChange={(e) => setFilterValue(e.target.value)}>
+              {filterOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </section>
 
       <section className="library-layout">
-      {kind === "perf_records" ? (
-        <PerfDatabaseView
-          rows={filteredRows as PerfRow[]}
-          selectedRow={selectedRow as PerfRow | null}
-          setSelectedRow={(row) => setSelectedRow(row as Row)}
-        />
-      ) : (
-        <>
-      <div className="table-panel">
-        <table>
-          <thead>
-            <tr>
-              {cols.map((c) => (
-                <th key={c}>{columnLabel(c)}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.map((row, i) => (
-              <tr
-                key={i}
-                className={selectedRow === row ? "table-row-active" : ""}
-                onClick={() => setSelectedRow(row)}
-              >
-                {cols.map((c) => (
-                  <td key={c}>{displayValue(row[c])}</td>
-                ))}
-              </tr>
-            ))}
-            {filteredRows.length === 0 && (
-              <tr>
-                <td colSpan={Math.max(cols.length, 1)}>
-                  <div className="empty-state">没有匹配当前查询条件的结果。</div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <aside className="detail-panel">
-        <h3>记录详情</h3>
-        {kind === "perf_records" && selectedRow && (
-          <div className="perfdb-summary">
-            <span className="badge official">{String(selectedRow.source_authority ?? "数据记录")}</span>
-            <p>{String(selectedRow.metric_coverage ?? "")}</p>
-          </div>
-        )}
-        {selectedRow ? (
-          <div className="detail-list">
-            {Object.entries(selectedRow).map(([key, value]) => (
-              <div className="detail-item" key={key}>
-                <span>{columnLabel(key)}</span>
-                {renderDetailValue(key, value)}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">点击左侧任意一行，查看该条记录的详细信息。</div>
-        )}
-      </aside>
-        </>
-      )}
-      </section>
-    </div>
-  );
-}
-
-function PerfDatabaseView({
-  rows,
-  selectedRow,
-  setSelectedRow,
-}: {
-  rows: PerfRow[];
-  selectedRow: PerfRow | null;
-  setSelectedRow: (row: PerfRow) => void;
-}) {
-  const bestThroughput = rows.reduce((best, row) => Math.max(best, row.metrics.throughput_tok_s), 0);
-  const bestTTFT = rows.reduce((best, row) => (best === 0 ? row.metrics.ttft_ms : Math.min(best, row.metrics.ttft_ms)), 0);
-  const officialCount = rows.filter((row) => row.source_authority.includes("官方")).length;
-  const [sortBy, setSortBy] = useState<"ttft" | "throughput" | "input">("throughput");
-  const [compareKeys, setCompareKeys] = useState<string[]>([]);
-  const [benchmarkComparison, setBenchmarkComparison] = useState<SimulationResponse | null>(null);
-  const [compareLoading, setCompareLoading] = useState(false);
-  const [compareError, setCompareError] = useState<string | null>(null);
-  const sortedRows = [...rows].sort((a, b) => {
-    if (sortBy === "ttft") return a.metrics.ttft_ms - b.metrics.ttft_ms;
-    if (sortBy === "input") return a.input_tokens - b.input_tokens;
-    return b.metrics.throughput_tok_s - a.metrics.throughput_tok_s;
-  });
-  const selectedCompareRows = sortedRows.filter((row, index) =>
-    compareKeys.includes(`${row.model}-${row.framework_version}-${index}`)
-  );
-  const compareChartData = selectedCompareRows.map((row) => ({
-    name: `${row.model}-${row.framework_version}`,
-    TTFT: row.metrics.ttft_ms,
-    吞吐: row.metrics.throughput_tok_s,
-  }));
-
-  function toggleCompare(rowKey: string) {
-    setCompareKeys((prev) => {
-      if (prev.includes(rowKey)) {
-        return prev.filter((item) => item !== rowKey);
-      }
-      if (prev.length >= 2) {
-        return [prev[1], rowKey];
-      }
-      return [...prev, rowKey];
-    });
-  }
-
-  async function compareWithSimulation(row: PerfRow) {
-    setCompareLoading(true);
-    setCompareError(null);
-    setBenchmarkComparison(null);
-    try {
-      const runtimeVersion = row.framework_version.split("（")[0] || row.framework_version;
-      const quantMode = row.quantization === "w8a8" ? "w8a8" : row.kv_quantization === "int8" ? "kv_int8" : "fp16";
-      const commMode = row.driver.includes("flashcomm") ? "flashcomm_v1" : "hccs_native";
-      const resp = await api.simulate({
-        model: row.model,
-        hardware: row.hardware,
-        framework: row.framework,
-        scenario: "",
-        runtime_version: runtimeVersion,
-        cann_version: row.driver.includes("CANN 9.0.0") ? "9.0.0" : "8.5.0",
-        graph_mode: row.driver.includes("dbo") ? "hybrid" : "eager",
-        quant_mode: quantMode,
-        comm_mode: commMode,
-        input_tokens: row.input_tokens,
-        output_tokens: row.output_tokens,
-        auto_optimize: true,
-        selected_optimizations: [],
-      });
-      setBenchmarkComparison(resp);
-    } catch (error) {
-      setCompareError(String(error));
-    } finally {
-      setCompareLoading(false);
-    }
-  }
-
-  return (
-    <>
-      <div className="perfdb-main">
-        <div className="perfdb-cards">
-          <div className="metric-card accent-green">
-            <div className="num">{officialCount}</div>
-            <div>官方数据条目</div>
-          </div>
-          <div className="metric-card accent-blue">
-            <div className="num">{bestThroughput.toFixed(2)}</div>
-            <div>最高吞吐（tok/s）</div>
-          </div>
-          <div className="metric-card accent-purple">
-            <div className="num">{bestTTFT.toFixed(0)}</div>
-            <div>最低 TTFT（ms）</div>
-          </div>
-        </div>
-
-        <div className="toolbar-panel">
-          <label className="toolbar-field">
-            <span>结果排序</span>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as "ttft" | "throughput" | "input")}>
-              <option value="throughput">按吞吐从高到低</option>
-              <option value="ttft">按 TTFT 从低到高</option>
-              <option value="input">按输入 Token 从低到高</option>
-            </select>
-          </label>
-          <div className="compare-hint">
-            选择最多两条 benchmark，查看官方性能结果图形化对比。
-          </div>
-        </div>
-
         <div className="table-panel">
           <table>
             <thead>
               <tr>
-                <th>对比</th>
-                <th>模型</th>
-                <th>硬件</th>
-                <th>框架版本</th>
-                <th>输入</th>
-                <th>并发</th>
-                <th>TTFT(ms)</th>
-                <th>吞吐(tok/s)</th>
-                <th>数据属性</th>
+                {cols.map((c) => (
+                  <th key={c}>{columnLabel(c)}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {sortedRows.map((row, index) => {
-                const rowKey = `${row.model}-${row.framework_version}-${index}`;
-                return (
+              {filteredRows.map((row, i) => (
                 <tr
-                  key={rowKey}
+                  key={i}
                   className={selectedRow === row ? "table-row-active" : ""}
                   onClick={() => setSelectedRow(row)}
                 >
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={compareKeys.includes(rowKey)}
-                      onChange={() => toggleCompare(rowKey)}
-                    />
-                  </td>
-                  <td>{row.model}</td>
-                  <td>{row.hardware}</td>
-                  <td>{row.framework_version}</td>
-                  <td>{row.input_tokens}</td>
-                  <td>{row.concurrency}</td>
-                  <td>{row.metrics.ttft_ms}</td>
-                  <td>{row.metrics.throughput_tok_s}</td>
-                  <td>
-                    <span className="badge official">{row.source_authority}</span>
-                  </td>
+                  {cols.map((c) => (
+                    <td key={c}>{displayValue(row[c])}</td>
+                  ))}
                 </tr>
-              )})}
-              {rows.length === 0 && (
+              ))}
+              {filteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={9}>
-                    <div className="empty-state">没有匹配当前查询条件的性能结果。</div>
+                  <td colSpan={Math.max(cols.length, 1)}>
+                    <div className="empty-state">没有匹配当前查询条件的结果。</div>
                   </td>
                 </tr>
               )}
@@ -500,144 +248,22 @@ function PerfDatabaseView({
           </table>
         </div>
 
-        {selectedCompareRows.length > 0 && (
-          <div className="chart-panel">
-            <div className="chart-header">
-              <h3>性能结果对比图</h3>
-              <span>对比官方 benchmark 的 TTFT 与吞吐差异</span>
-            </div>
-            <div className="chart-wrap">
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={compareChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
-                  <XAxis dataKey="name" stroke="currentColor" />
-                  <YAxis stroke="currentColor" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="TTFT" fill="#4c6bff" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="吞吐" fill="#16a34a" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <aside className="detail-panel">
-        <h3>性能结果详情</h3>
-        {selectedRow ? (
-          <>
-            <div className="perfdb-summary">
-              <span className="badge official">{selectedRow.source_authority}</span>
-              <p>{selectedRow.metric_coverage}</p>
-            </div>
+        <aside className="detail-panel">
+          <h3>记录详情</h3>
+          {selectedRow ? (
             <div className="detail-list">
-              <div className="detail-item">
-                <span>组合</span>
-                <strong>
-                  {selectedRow.model} / {selectedRow.hardware} / {selectedRow.framework_version}
-                </strong>
-              </div>
-              <div className="detail-item">
-                <span>性能结果</span>
-                {renderDetailValue("metrics", selectedRow.metrics)}
-              </div>
-              <div className="detail-item">
-                <span>测试条件</span>
-                <strong>{selectedRow.test_conditions}</strong>
-              </div>
-              <div className="detail-item">
-                <span>推导指标</span>
-                {renderDetailValue("derived_metrics", selectedRow.derived_metrics)}
-              </div>
-              <div className="detail-item">
-                <span>官方来源</span>
-                {renderDetailValue("source", selectedRow.source)}
-              </div>
+              {Object.entries(selectedRow).map(([key, value]) => (
+                <div className="detail-item" key={key}>
+                  <span>{columnLabel(key)}</span>
+                  {renderDetailValue(key, value)}
+                </div>
+              ))}
             </div>
-            <div className="compare-actions">
-              <button className="primary-btn" type="button" onClick={() => compareWithSimulation(selectedRow)} disabled={compareLoading}>
-                {compareLoading ? "正在执行对照仿真…" : "与当前仿真模型对照"}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="empty-state">点击左侧性能结果，查看其指标、条件与来源说明。</div>
-        )}
-      </aside>
-      {selectedRow && benchmarkComparison && (
-        <section className="chart-panel library-full-span">
-          <div className="chart-header">
-            <h3>官方 Benchmark vs 当前仿真结果</h3>
-            <span>将选中的官方公开数据与最差 / 典型 / 最佳仿真结果放在同一视图对比</span>
-          </div>
-          <BenchmarkSimulationCompare benchmark={selectedRow} simulation={benchmarkComparison} />
-        </section>
-      )}
-      {selectedRow && compareError && (
-        <section className="error-panel library-full-span">对照仿真失败：{compareError}</section>
-      )}
-    </>
-  );
-}
-
-function BenchmarkSimulationCompare({
-  benchmark,
-  simulation,
-}: {
-  benchmark: PerfRow;
-  simulation: SimulationResponse;
-}) {
-  const chartData = [
-    {
-      name: "官方结果",
-      TTFT: benchmark.metrics.ttft_ms,
-      吞吐: benchmark.metrics.throughput_tok_s,
-    },
-    ...simulation.profiles.map((profile) => ({
-      name: profile.label,
-      TTFT: profile.metrics.ttft_ms,
-      吞吐: profile.metrics.throughput_tok_s,
-    })),
-  ];
-
-  const typical = simulation.profiles.find((profile) => profile.label === "典型") ?? simulation.profiles[0];
-  const ttftDelta = typical ? (((typical.metrics.ttft_ms - benchmark.metrics.ttft_ms) / benchmark.metrics.ttft_ms) * 100).toFixed(1) : "-";
-  const throughputDelta = typical ? (((typical.metrics.throughput_tok_s - benchmark.metrics.throughput_tok_s) / benchmark.metrics.throughput_tok_s) * 100).toFixed(1) : "-";
-
-  return (
-    <div className="compare-grid">
-      <div className="compare-summary">
-        <div className="detail-item">
-          <span>官方 TTFT</span>
-          <strong>{benchmark.metrics.ttft_ms} ms</strong>
-        </div>
-        <div className="detail-item">
-          <span>典型仿真 TTFT 偏差</span>
-          <strong>{ttftDelta}%</strong>
-        </div>
-        <div className="detail-item">
-          <span>官方吞吐</span>
-          <strong>{benchmark.metrics.throughput_tok_s} tok/s</strong>
-        </div>
-        <div className="detail-item">
-          <span>典型仿真吞吐偏差</span>
-          <strong>{throughputDelta}%</strong>
-        </div>
-      </div>
-      <div className="chart-wrap">
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
-            <XAxis dataKey="name" stroke="currentColor" />
-            <YAxis stroke="currentColor" />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="TTFT" fill="#4c6bff" radius={[6, 6, 0, 0]} />
-            <Bar dataKey="吞吐" fill="#16a34a" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+          ) : (
+            <div className="empty-state">点击左侧任意一行，查看该条记录的详细信息。</div>
+          )}
+        </aside>
+      </section>
     </div>
   );
 }

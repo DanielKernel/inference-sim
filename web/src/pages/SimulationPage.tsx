@@ -19,6 +19,33 @@ const PROCESS_STEPS = [
   "汇总结果并渲染页面",
 ];
 
+function normalizeSimulationResponse(resp: SimulationResponse): SimulationResponse {
+  const appliedOptimizations = resp.applied_optimizations ?? [];
+  const breakdown = resp.breakdown ?? [];
+  const notes = resp.notes ?? [];
+  const profiles =
+    resp.profiles && resp.profiles.length > 0
+      ? resp.profiles
+      : [
+          {
+            label: "当前结果",
+            description: "后端未返回最差 / 典型 / 最佳三档结果，已回退为单结果模式。",
+            metrics: resp.metrics,
+            applied_optimizations: appliedOptimizations,
+            bottleneck: resp.bottleneck,
+            breakdown,
+          },
+        ];
+
+  return {
+    ...resp,
+    applied_optimizations: appliedOptimizations,
+    breakdown,
+    notes,
+    profiles,
+  };
+}
+
 export function SimulationPage() {
   const [models, setModels] = useState<ModelEntry[]>([]);
   const [hardware, setHardware] = useState<HardwareEntry[]>([]);
@@ -84,22 +111,26 @@ export function SimulationPage() {
     () => optimizations.filter((opt) => opt.frameworks.includes(framework)),
     [framework, optimizations]
   );
+  const safeBreakdown = result?.breakdown ?? [];
+  const safeProfiles = result?.profiles ?? [];
+  const safeAppliedOptimizations = result?.applied_optimizations ?? [];
+  const safeNotes = result?.notes ?? [];
   const totalTimelineMs =
-    result && result.breakdown.length > 0
-      ? result.breakdown[result.breakdown.length - 1].end_ms
+    safeBreakdown.length > 0
+      ? safeBreakdown[safeBreakdown.length - 1].end_ms
       : 0;
   const timelineLanes = result
     ? ["预填充", "解码", "通信", "后处理"].map((lane) => ({
         lane,
-        items: result.breakdown.filter((step) => step.lane === lane),
+        items: safeBreakdown.filter((step) => step.lane === lane),
       })).filter((group) => group.items.length > 0)
     : [];
-  const profileChartData = result?.profiles.map((profile) => ({
+  const profileChartData = safeProfiles.map((profile) => ({
     name: profile.label,
     TTFT: profile.metrics.ttft_ms,
     TPOT: profile.metrics.tpot_ms,
     吞吐: profile.metrics.throughput_tok_s,
-  })) ?? [];
+  }));
 
   function toggleOptimization(id: string) {
     setSelectedOptimizations((prev) =>
@@ -139,7 +170,7 @@ export function SimulationPage() {
       const minProcessDelay = new Promise((resolve) => window.setTimeout(resolve, 1800));
       const [resp] = await Promise.all([respPromise, minProcessDelay]);
       setProcessIndex(PROCESS_STEPS.length - 1);
-      setResult(resp);
+      setResult(normalizeSimulationResponse(resp));
     } catch (err) {
       setError(String(err));
     } finally {
@@ -401,7 +432,7 @@ export function SimulationPage() {
               {result.selection.graph_mode} / {result.selection.quant_mode} / {result.selection.comm_mode}
             </p>
             <div className="tag-row">
-              {result.applied_optimizations.map((item) => (
+              {safeAppliedOptimizations.map((item) => (
                 <span className="tag" key={item}>
                   {item}
                 </span>
@@ -411,7 +442,7 @@ export function SimulationPage() {
 
           <h3>最差 / 典型 / 最佳 对比</h3>
           <div className="profile-card-grid">
-            {result.profiles.map((profile) => (
+            {safeProfiles.map((profile) => (
               <div className="profile-card" key={profile.label}>
                 <div className="eyebrow">{profile.label}</div>
                 <strong>{profile.description}</strong>
@@ -497,7 +528,7 @@ export function SimulationPage() {
 
           <h3>阶段耗时拆解</h3>
           <div className="breakdown-list">
-            {result.breakdown.map((row) => (
+            {safeBreakdown.map((row) => (
               <div className="breakdown-item" key={row.stage}>
                 <div className="breakdown-topline">
                   <strong>{row.stage}</strong>
@@ -511,11 +542,11 @@ export function SimulationPage() {
             ))}
           </div>
 
-          {result.notes.length > 0 && (
+          {safeNotes.length > 0 && (
             <>
               <h3>结果说明</h3>
               <ul>
-                {result.notes.map((note) => (
+                {safeNotes.map((note) => (
                   <li key={note}>{note}</li>
                 ))}
               </ul>

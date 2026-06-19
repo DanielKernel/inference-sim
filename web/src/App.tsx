@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { Dashboard } from "./pages/Dashboard";
 import { LibraryPage } from "./pages/LibraryPage";
+import { PerfDatabasePage } from "./pages/PerfDatabasePage";
 import { SimulationPage } from "./pages/SimulationPage";
 
 const libs: { kind: string; label: string }[] = [
@@ -10,7 +11,6 @@ const libs: { kind: string; label: string }[] = [
   { kind: "frameworks", label: "框架库" },
   { kind: "scenarios", label: "场景库" },
   { kind: "optimizations", label: "优化手段库" },
-  { kind: "perf_records", label: "性能数据库" },
 ];
 
 type ThemeMode = "system" | "light" | "dark";
@@ -56,6 +56,7 @@ export function App() {
             总览
           </NavLink>
           <NavLink to="/simulate">配置与仿真</NavLink>
+          <NavLink to="/perfdb">性能数据库</NavLink>
           {libs.map((l) => (
             <NavLink key={l.kind} to={`/library/${l.kind}`}>
               {l.label}
@@ -89,6 +90,8 @@ export function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/simulate" element={<SimulationPage />} />
+          <Route path="/perfdb" element={<PerfDatabasePage />} />
+          <Route path="/library/perf_records" element={<PerfDatabasePage />} />
           <Route path="/library/:kind" element={<LibraryPage />} />
         </Routes>
       </main>
