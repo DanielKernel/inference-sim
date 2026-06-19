@@ -97,24 +97,34 @@ type Interconnect struct {
 	Topology            string  `json:"topology" yaml:"topology"`
 }
 
+// HardwareCalibration stores the extra coefficients needed to run the BLIS
+// native roofline/DES path from curated hardware entries.
+type HardwareCalibration struct {
+	MfuPrefill float64 `json:"mfu_prefill" yaml:"mfu_prefill"`
+	MfuDecode  float64 `json:"mfu_decode" yaml:"mfu_decode"`
+	Status     string  `json:"status" yaml:"status"` // measured | assumed
+	Notes      string  `json:"notes" yaml:"notes"`
+}
+
 // Hardware is a single entry in the hardware library. Roofline-derived values
 // (ridge point, bound classification) are computed on demand, not stored.
 type Hardware struct {
-	Name               string       `json:"name" yaml:"name"`
-	Vendor             string       `json:"vendor" yaml:"vendor"`
-	DeviceType         string       `json:"device_type" yaml:"device_type"` // gpu | npu | tpu
-	ChipType           string       `json:"chip_type" yaml:"chip_type"`
-	Year               int          `json:"year" yaml:"year"`
-	FP16TFlops         float64      `json:"fp16_tflops" yaml:"fp16_tflops"`
-	FP8TFlops          float64      `json:"fp8_tflops" yaml:"fp8_tflops"`
-	INT8TOps           float64      `json:"int8_tops" yaml:"int8_tops"`
-	MemoryGiB          float64      `json:"memory_gib" yaml:"memory_gib"`
-	MemoryBandwidthTBs float64      `json:"memory_bandwidth_tbs" yaml:"memory_bandwidth_tbs"`
-	PowerW             float64      `json:"power_w" yaml:"power_w"`
-	Interconnect       Interconnect `json:"interconnect" yaml:"interconnect"`
-	SupportedDtypes    []string     `json:"supported_dtypes" yaml:"supported_dtypes"`
-	References         []Reference  `json:"references" yaml:"references"`
-	Tags               []string     `json:"tags" yaml:"tags"`
+	Name               string              `json:"name" yaml:"name"`
+	Vendor             string              `json:"vendor" yaml:"vendor"`
+	DeviceType         string              `json:"device_type" yaml:"device_type"` // gpu | npu | tpu
+	ChipType           string              `json:"chip_type" yaml:"chip_type"`
+	Year               int                 `json:"year" yaml:"year"`
+	FP16TFlops         float64             `json:"fp16_tflops" yaml:"fp16_tflops"`
+	FP8TFlops          float64             `json:"fp8_tflops" yaml:"fp8_tflops"`
+	INT8TOps           float64             `json:"int8_tops" yaml:"int8_tops"`
+	MemoryGiB          float64             `json:"memory_gib" yaml:"memory_gib"`
+	MemoryBandwidthTBs float64             `json:"memory_bandwidth_tbs" yaml:"memory_bandwidth_tbs"`
+	PowerW             float64             `json:"power_w" yaml:"power_w"`
+	Interconnect       Interconnect        `json:"interconnect" yaml:"interconnect"`
+	Calibration        HardwareCalibration `json:"calibration" yaml:"calibration"`
+	SupportedDtypes    []string            `json:"supported_dtypes" yaml:"supported_dtypes"`
+	References         []Reference         `json:"references" yaml:"references"`
+	Tags               []string            `json:"tags" yaml:"tags"`
 }
 
 // Optimization technique offered by a framework or modeled by combosim.

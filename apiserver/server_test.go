@@ -81,6 +81,51 @@ func TestLibraryList(t *testing.T) {
 	}
 }
 
+func TestLibraryListSupportsFiltering(t *testing.T) {
+	srv := testServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/library/frameworks?q=vllm&limit=2", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	var rows []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &rows); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(rows) == 0 {
+		t.Fatal("expected at least one filtered framework")
+	}
+	if len(rows) > 2 {
+		t.Fatalf("len(rows) = %d, want <= 2", len(rows))
+	}
+}
+
+func TestLibraryCompare(t *testing.T) {
+	srv := testServer(t)
+	body := `{"keys":["ascend-910b","nvidia-h100"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/library/hardware/compare", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 body=%s", rec.Code, rec.Body.String())
+	}
+	var resp struct {
+		Items      []map[string]any `json:"items"`
+		DiffFields []string         `json:"diff_fields"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Items) != 2 {
+		t.Fatalf("len(items) = %d, want 2", len(resp.Items))
+	}
+	if len(resp.DiffFields) == 0 {
+		t.Fatal("expected diff fields")
+	}
+}
+
 func TestLibraryListUnknownKind(t *testing.T) {
 	srv := testServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/api/library/bogus", nil)
@@ -144,5 +189,95 @@ func TestSimulate(t *testing.T) {
 	}
 	if len(resp.Breakdown) == 0 {
 		t.Fatal("expected breakdown entries")
+	}
+}
+
+func TestAnalyticEstimate(t *testing.T) {
+	srv := testServer(t)
+	body := `{
+	  "model":"qwen3-32b",
+	  "hardware":"ascend-910b",
+	  "scenario":"rag"
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/api/analytic/estimate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 body=%s", rec.Code, rec.Body.String())
+	}
+	var resp struct {
+		Estimates struct {
+			TTFTms float64 `json:"ttft_ms"`
+			TPOTms float64 `json:"tpot_ms"`
+		} `json:"estimates"`
+		Roofline struct {
+			RidgePoint float64 `json:"ridge_point"`
+		} `json:"roofline"`
+		Breakdown []any `json:"breakdown"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Estimates.TTFTms <= 0 || resp.Estimates.TPOTms <= 0 {
+		t.Fatalf("expected positive estimates, got %+v", resp.Estimates)
+	}
+	if resp.Roofline.RidgePoint <= 0 {
+		t.Fatalf("expected positive ridge point, got %v", resp.Roofline.RidgePoint)
+	}
+	if len(resp.Breakdown) == 0 {
+		t.Fatal("expected analytic breakdown")
+	}
+}
+
+func TestBLISSimulate(t *testing.T) {
+	srv := testServer(t)
+	body := `{
+	  "model":"qwen3-8b",
+	  "hardware":"nvidia-a100",
+	  "scenario":"chatbot",
+	  "latency_backend":"roofline",
+	  "tp":1,
+	  "num_instances":1,
+	  "rate":1.5,
+	  "num_requests":8,
+	  "horizon_us":2000000,
+	  "arrival_process":"poisson",
+	  "routing_policy":"round-robin",
+	  "scheduler":"fcfs",
+	  "preemption_policy":"fcfs",
+	  "total_kv_blocks":120000,
+	  "max_running_reqs":32,
+	  "max_scheduled_tokens":1024,
+	  "seed":7
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/api/blis/simulate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 body=%s", rec.Code, rec.Body.String())
+	}
+	var resp struct {
+		Metrics struct {
+			InjectedRequests  int     `json:"injected_requests"`
+			CompletedRequests int     `json:"completed_requests"`
+			TTFTMeanMs        float64 `json:"ttft_mean_ms"`
+		} `json:"metrics"`
+		Calibration struct {
+			Status string `json:"status"`
+		} `json:"calibration"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Metrics.InjectedRequests == 0 {
+		t.Fatal("expected injected requests")
+	}
+	if resp.Metrics.TTFTMeanMs <= 0 {
+		t.Fatalf("expected positive TTFT mean, got %v", resp.Metrics.TTFTMeanMs)
+	}
+	if resp.Calibration.Status == "" {
+		t.Fatal("expected calibration status")
 	}
 }

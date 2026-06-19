@@ -27,7 +27,11 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/config", s.handleConfig)
+	mux.HandleFunc("POST /api/library/{kind}/compare", s.handleLibraryCompare)
 	mux.HandleFunc("GET /api/library/{kind}", s.handleLibraryList)
+	mux.HandleFunc("POST /api/analytic/estimate", s.handleAnalyticEstimate)
+	mux.HandleFunc("POST /api/combosim/simulate", s.handleSimulate)
+	mux.HandleFunc("POST /api/blis/simulate", s.handleBLISSimulate)
 	mux.HandleFunc("POST /api/simulate", s.handleSimulate)
 	if s.webDir != "" {
 		mux.HandleFunc("GET /", s.handleWeb)
@@ -85,20 +89,24 @@ func (s *Server) handleConfig(w http.ResponseWriter, _ *http.Request) {
 // comparison endpoints are added in Phase 1; this is the scaffolding lister.
 func (s *Server) handleLibraryList(w http.ResponseWriter, r *http.Request) {
 	kind := r.PathValue("kind")
+	q := r.URL.Query().Get("q")
+	field := r.URL.Query().Get("field")
+	value := r.URL.Query().Get("value")
+	limit := r.URL.Query().Get("limit")
 	var items any
 	switch kind {
 	case "models":
-		items = s.store.Models
+		items = filterLibraryModels(s.store.Models, q, field, value, limit)
 	case "hardware":
-		items = s.store.Hardware
+		items = filterLibraryHardware(s.store.Hardware, q, field, value, limit)
 	case "frameworks":
-		items = s.store.Frameworks
+		items = filterLibraryFrameworks(s.store.Frameworks, q, field, value, limit)
 	case "scenarios":
-		items = s.store.Scenarios
+		items = filterLibraryScenarios(s.store.Scenarios, q, field, value, limit)
 	case "perf_records", "perfdb":
-		items = s.store.PerfRecords
+		items = filterLibraryPerf(s.store.PerfRecords, q, field, value, limit)
 	case "optimizations":
-		items = s.store.Optimizations
+		items = filterLibraryOptimizations(s.store.Optimizations, q, field, value, limit)
 	default:
 		writeError(w, http.StatusNotFound, "unknown library kind: "+kind)
 		return

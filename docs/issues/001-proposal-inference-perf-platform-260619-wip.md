@@ -38,4 +38,4 @@
 
 ## 下一步
 
-- 推进 [Issue #002](002-feature-platform-scaffolding-260619-wip.md)（Phase 0），随后规划 Phase 1 各库 issue。
+- 在 [Issue #004](004-feature-phase1-5-webui-260619-done.md) 的首版能力基础上，继续扩充真实 perf 数据覆盖、Ascend 校准数据，以及更细粒度的 BLIS 原生工作负载控制面。

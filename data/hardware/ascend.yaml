@@ -22,6 +22,11 @@ items:
       links_per_device: 3
       bandwidth_per_link_gbs: 90.0
       topology: "4p_full_mesh"
+    calibration:
+      mfu_prefill: 0.33
+      mfu_decode: 0.28
+      status: assumed
+      notes: "用于 Web 中 BLIS 原生 roofline/DES 接入的保守校准值，后续可被真实 observe/calibrate 数据替换。"
     supported_dtypes: [fp16, bf16, int8]
     references:
       - title: "Ascend 910B 官方产品页"
@@ -44,6 +49,11 @@ items:
       links_per_device: 7
       bandwidth_per_link_gbs: 112.0
       topology: "8p_full_mesh"
+    calibration:
+      mfu_prefill: 0.4
+      mfu_decode: 0.34
+      status: assumed
+      notes: "首版泛化校准，用于原生 BLIS 模拟接入的 conservative default。"
     supported_dtypes: [fp16, bf16, fp8, int8]
     references:
       - title: "Ascend 950 官方发布页"
@@ -66,6 +76,11 @@ items:
       links_per_device: 1
       bandwidth_per_link_gbs: 32.0
       topology: "none"
+    calibration:
+      mfu_prefill: 0.24
+      mfu_decode: 0.2
+      status: assumed
+      notes: "边缘设备近似值，便于在 Web 中运行小规模原生仿真。"
     supported_dtypes: [fp16, int8]
     references:
       - title: "Ascend 310P 官方产品页"

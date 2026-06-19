@@ -42,16 +42,16 @@ export function Dashboard() {
 
       <section className="toolbar-panel info-band">
         <div className="info-item">
-          <strong>一键运行</strong>
-          <span>构建 API + Web，打开浏览器后直接配置与仿真</span>
+        <strong>Simulation Studio</strong>
+        <span>在一个工作台里切换平台组合仿真、解析模型和 BLIS 原生 DES</span>
         </div>
         <div className="info-item">
-          <strong>全库查询</strong>
-          <span>模型、硬件、框架、场景、优化手段、性能数据库均支持关键字查询</span>
+        <strong>原生 BLIS 接入</strong>
+        <span>不再只展示 vllm-ascend，Web 现已可直接驱动 inference-sim 的 cluster 仿真路径</span>
         </div>
         <div className="info-item">
-          <strong>过程可视化</strong>
-          <span>开始仿真后实时展示执行阶段，不再只给最终结果</span>
+        <strong>解析 + 数据 + 仿真联动</strong>
+        <span>可把 roofline 指标、公开 benchmark 与组合仿真结果放到同一条分析链路里</span>
         </div>
       </section>
 

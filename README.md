@@ -30,7 +30,7 @@
 
 ### 当前进度
 - ✅ Phase 0：平台基础设施（API 骨架、库加载器、Web 骨架、CI、双模块拆分）。
-- ⏳ Phase 1~5：四大库 / 解析模型 / 性能数据库 / 组合仿真 / Ascend 保真（见 `docs/issues/`）。
+- ⏳ Phase 1~5：已补齐首版四大库对比、解析模型接口、性能数据库查询视图、组合仿真工作台，以及 **BLIS 原生仿真 Web 接入**；后续继续扩充数据覆盖与 Ascend 校准保真（见 `docs/issues/`）。
 
 ## 环境要求
 
@@ -202,8 +202,11 @@ scripts\run-platform.cmd
 |------|------|------|
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/config` | 平台配置与各库条目计数 |
-| GET | `/api/library/{kind}` | 列出某类库条目（`models`/`hardware`/`frameworks`/`scenarios`/`optimizations`/`perf_records`） |
-| POST | `/api/simulate` | 根据模型/硬件/框架/场景/优化手段执行轻量仿真 |
+| GET | `/api/library/{kind}` | 列出某类库条目，支持 `q` / `field` / `value` / `limit` 过滤 |
+| POST | `/api/library/{kind}/compare` | 对模型 / 硬件 / 框架 / 场景 / 优化手段做字段差异对比 |
+| POST | `/api/analytic/estimate` | 返回 roofline 风格的 TTFT/TPOT、ridge point、曲线与瓶颈分解 |
+| POST | `/api/combosim/simulate` | 根据模型/硬件/框架/场景/优化手段执行平台组合仿真 |
+| POST | `/api/blis/simulate` | 直接调用 `third_party/inference-sim` 的 cluster DES 路径执行原生仿真 |
 
 示例：
 

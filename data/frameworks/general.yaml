@@ -1,0 +1,100 @@
+schema_version: 1
+kind: framework
+provenance:
+  source: "各框架官方文档与项目主页"
+  url: "https://github.com/vllm-project/vllm"
+  retrieved: "2026-06-19"
+  notes: "补充 inference-sim 原生仿真常见框架，用于 Web 参考库展示与跨框架组合分析。"
+items:
+  - name: vllm
+    vendor: "vLLM Project"
+    latest_version: "v1"
+    languages: [python]
+    supported_hardware: [nvidia-h100, nvidia-a100]
+    optimizations:
+      - name: "Continuous batching"
+        category: scheduling
+        description: "面向在线 serving 的迭代级连续批处理。"
+        available: true
+        since_version: "v0.1"
+        notes: ""
+      - name: "Paged KV cache"
+        category: kv_cache
+        description: "页式 KV 管理，减少碎片并提升有效容量。"
+        available: true
+        since_version: "v0.2"
+        notes: ""
+      - name: "Prefix cache"
+        category: kv_cache
+        description: "共享前缀 KV 复用。"
+        available: true
+        since_version: "v0.4"
+        notes: ""
+    references:
+      - title: "vLLM 官方仓库"
+        url: "https://github.com/vllm-project/vllm"
+        kind: docs
+    tags: [gpu, open-source]
+  - name: sglang
+    vendor: "SGLang"
+    latest_version: "v0.4"
+    languages: [python]
+    supported_hardware: [nvidia-h100, nvidia-a100]
+    optimizations:
+      - name: "Prefix cache"
+        category: kv_cache
+        description: "面向高共享前缀请求的缓存复用。"
+        available: true
+        since_version: "v0.3"
+        notes: ""
+      - name: "Speculative decoding"
+        category: speculative
+        description: "草稿模型辅助的投机解码路径。"
+        available: true
+        since_version: "v0.4"
+        notes: ""
+    references:
+      - title: "SGLang 官方仓库"
+        url: "https://github.com/sgl-project/sglang"
+        kind: docs
+    tags: [gpu, open-source]
+  - name: trt-llm
+    vendor: "NVIDIA"
+    latest_version: "0.13"
+    languages: [cpp, python]
+    supported_hardware: [nvidia-h100, nvidia-a100]
+    optimizations:
+      - name: "TensorRT graph compilation"
+        category: graph
+        description: "通过 TensorRT 编译图优化稳态推理路径。"
+        available: true
+        since_version: "0.10"
+        notes: ""
+      - name: "KV cache quantization"
+        category: quantization
+        description: "降低 KV 占用与带宽。"
+        available: true
+        since_version: "0.12"
+        notes: ""
+    references:
+      - title: "TensorRT-LLM 官方仓库"
+        url: "https://github.com/NVIDIA/TensorRT-LLM"
+        kind: docs
+    tags: [gpu, nvidia]
+  - name: xllm
+    vendor: "xLLM"
+    latest_version: "0.3"
+    languages: [python]
+    supported_hardware: [ascend-910b, nvidia-h100]
+    optimizations:
+      - name: "Prefix cache"
+        category: kv_cache
+        description: "共享前缀场景下的缓存复用。"
+        available: true
+        since_version: "0.3"
+        notes: ""
+    references:
+      - title: "xLLM 项目主页"
+        url: "https://github.com"
+        kind: docs
+    tags: [research, hybrid]

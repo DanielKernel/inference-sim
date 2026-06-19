@@ -106,32 +106,15 @@ func (s *Server) simulate(req simulateRequest) (*simulateResponse, error) {
 	if !ok {
 		return nil, errBadInput("unknown framework", req.Framework)
 	}
-	var sc library.Scenario
 	if req.Scenario != "" {
-		var ok bool
-		sc, ok = findByName(s.store.Scenarios, req.Scenario, func(s library.Scenario) string { return s.Name })
-		if !ok {
+		_, found := findByName(s.store.Scenarios, req.Scenario, func(item library.Scenario) string { return item.Name })
+		if !found {
 			return nil, errBadInput("unknown scenario", req.Scenario)
 		}
 	}
-
-	inputTokens := req.InputTokens
-	if inputTokens <= 0 {
-		if req.Scenario == "" {
-			return nil, errBadInput("invalid token lengths", "input_tokens must be > 0 when scenario is empty")
-		}
-		inputTokens = sc.InputTokens.Typical
-	}
-	outputTokens := req.OutputTokens
-	if outputTokens <= 0 {
-		if req.Scenario == "" {
-			outputTokens = 0
-		} else {
-			outputTokens = sc.OutputTokens.Typical
-		}
-	}
-	if inputTokens <= 0 || outputTokens < 0 {
-		return nil, errBadInput("invalid token lengths", "input_tokens must be > 0 and output_tokens must be >= 0")
+	inputTokens, outputTokens, err := resolveScenarioTokens(s.store.Scenarios, req.Scenario, req.InputTokens, req.OutputTokens)
+	if err != nil {
+		return nil, err
 	}
 
 	applicable := applicableOptimizations(s.store.Optimizations, fw.Name)
@@ -170,24 +153,7 @@ func (s *Server) simulate(req simulateRequest) (*simulateResponse, error) {
 func buildResultProfile(label, description string, req simulateRequest, model library.Model, hw library.Hardware, framework string, outputTokens, inputTokens int, applicable map[string]library.Optimization, applied []string) (resultProfile, []string) {
 	latencyFactor, throughputFactor, notes := combineOptimizationEffects(applicable, applied)
 	latencyFactor, throughputFactor, notes = applyRuntimeProfileAdjustments(req, latencyFactor, throughputFactor, notes)
-
-	ttftComputeMs := float64(inputTokens) * model.ParamsB * 0.03 / math.Max(hw.FP16TFlops/100.0, 0.1)
-	ttftMemoryMs := float64(inputTokens) * model.ParamsB * 0.012 / math.Max(hw.MemoryBandwidthTBs, 0.1)
-	baseTTFTms := math.Max(ttftComputeMs, ttftMemoryMs)
-
-	tpotComputeMs := model.ParamsB * 0.14 / math.Max(hw.FP16TFlops/100.0, 0.1)
-	tpotMemoryMs := (model.ParamsB*0.09 + float64(inputTokens)*0.0025) / math.Max(hw.MemoryBandwidthTBs, 0.1)
-	baseTPOTms := math.Max(tpotComputeMs, tpotMemoryMs)
-
-	ttftMs := round2(baseTTFTms * latencyFactor)
-	tpotMs := round2(baseTPOTms * latencyFactor)
-	e2eMs := round2(ttftMs + tpotMs*float64(outputTokens))
-	throughputTokS := round2((1000.0 / math.Max(tpotMs, 0.1)) * throughputFactor)
-
-	bottleneck := "显存/内存带宽"
-	if ttftComputeMs+tpotComputeMs > ttftMemoryMs+tpotMemoryMs {
-		bottleneck = "计算吞吐"
-	}
+	estimate := estimateMetrics(model, hw, inputTokens, outputTokens, latencyFactor, throughputFactor)
 	if hw.Interconnect.LinksPerDevice > 1 && model.ParamsB >= 30 {
 		notes = append(notes, "大模型张量并行通信开销不可忽略，互联效率可能改变最终瓶颈。")
 	}
@@ -195,10 +161,10 @@ func buildResultProfile(label, description string, req simulateRequest, model li
 	return resultProfile{
 		Label:                label,
 		Description:          description,
-		Metrics:              profileMetrics{TTFTms: ttftMs, TPOTms: tpotMs, E2Ems: e2eMs, ThroughputTokS: throughputTokS},
+		Metrics:              profileMetrics{TTFTms: estimate.TTFTms, TPOTms: estimate.TPOTms, E2Ems: estimate.E2Ems, ThroughputTokS: estimate.ThroughputTokS},
 		AppliedOptimizations: applied,
-		Bottleneck:           bottleneck,
-		Breakdown:            buildBreakdown(ttftMs, tpotMs, outputTokens, bottleneck),
+		Bottleneck:           estimate.Bottleneck,
+		Breakdown:            estimate.Breakdown,
 	}, notes
 }
 

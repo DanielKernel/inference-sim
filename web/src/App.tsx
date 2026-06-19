@@ -55,7 +55,7 @@ export function App() {
           <NavLink to="/" end>
             总览
           </NavLink>
-          <NavLink to="/simulate">配置与仿真</NavLink>
+          <NavLink to="/simulate">Simulation Studio</NavLink>
           <NavLink to="/perfdb">性能数据库</NavLink>
           {libs.map((l) => (
             <NavLink key={l.kind} to={`/library/${l.kind}`}>

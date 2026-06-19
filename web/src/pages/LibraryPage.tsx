@@ -128,6 +128,8 @@ export function LibraryPage() {
   const [query, setQuery] = useState("");
   const [filterValue, setFilterValue] = useState("全部");
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
+  const [compareKeys, setCompareKeys] = useState<string[]>([]);
+  const [compareResult, setCompareResult] = useState<{ items: Row[]; diff_fields: string[] } | null>(null);
 
   useEffect(() => {
     setError(null);
@@ -135,6 +137,8 @@ export function LibraryPage() {
     setQuery("");
     setFilterValue("全部");
     setSelectedRow(null);
+    setCompareKeys([]);
+    setCompareResult(null);
     api
       .library<Row>(kind)
       .then((data) => {
@@ -189,6 +193,10 @@ export function LibraryPage() {
             <strong>{filteredRows.length}</strong>
             <span>当前命中</span>
           </div>
+          <div className="mini-stat">
+            <strong>{compareKeys.length}</strong>
+            <span>对比已选</span>
+          </div>
         </div>
       </section>
 
@@ -220,6 +228,7 @@ export function LibraryPage() {
           <table>
             <thead>
               <tr>
+                <th>对比</th>
                 {cols.map((c) => (
                   <th key={c}>{columnLabel(c)}</th>
                 ))}
@@ -232,6 +241,24 @@ export function LibraryPage() {
                   className={selectedRow === row ? "table-row-active" : ""}
                   onClick={() => setSelectedRow(row)}
                 >
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={compareKeys.includes(compareKey(kind, row))}
+                      onChange={() => {
+                        const key = compareKey(kind, row);
+                        setCompareKeys((prev) => {
+                          if (prev.includes(key)) {
+                            return prev.filter((item) => item !== key);
+                          }
+                          if (prev.length >= 3) {
+                            return [...prev.slice(1), key];
+                          }
+                          return [...prev, key];
+                        });
+                      }}
+                    />
+                  </td>
                   {cols.map((c) => (
                     <td key={c}>{displayValue(row[c])}</td>
                   ))}
@@ -239,7 +266,7 @@ export function LibraryPage() {
               ))}
               {filteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={Math.max(cols.length, 1)}>
+                  <td colSpan={Math.max(cols.length + 1, 1)}>
                     <div className="empty-state">没有匹配当前查询条件的结果。</div>
                   </td>
                 </tr>
@@ -264,6 +291,71 @@ export function LibraryPage() {
           )}
         </aside>
       </section>
+
+      <section className="toolbar-panel">
+        <div className="compare-hint">
+          支持在参考库中直接勾选 2~3 条记录做字段差异对照，便于完成 Phase 1 的多项对比分析。
+        </div>
+        <div className="compare-actions">
+          <button
+            className="primary-btn"
+            type="button"
+            disabled={compareKeys.length < 2}
+            onClick={() => {
+              api
+                .libraryCompare<Row>(kind, compareKeys)
+                .then(setCompareResult)
+                .catch((e) => setError(String(e)));
+            }}
+          >
+            生成字段对比
+          </button>
+        </div>
+      </section>
+
+      {compareResult && (
+        <section className="chart-panel">
+          <div className="chart-header">
+            <h3>字段差异对比</h3>
+            <span>后端返回差异字段列表，前端集中展示更适合对比阅读的核心维度。</span>
+          </div>
+          <div className="tag-row" style={{ marginBottom: 16 }}>
+            {compareResult.diff_fields.map((field) => (
+              <span className="tag" key={field}>
+                {columnLabel(field)}
+              </span>
+            ))}
+          </div>
+          <div className="profile-card-grid">
+            {compareResult.items.map((item, index) => (
+              <div className="profile-card" key={`${compareKey(kind, item)}-${index}`}>
+                <div className="eyebrow">{displayValue(item.name ?? item.id ?? `记录 ${index + 1}`)}</div>
+                {compareResult.diff_fields.map((field) => (
+                  <div className="detail-item" key={field}>
+                    <span>{columnLabel(field)}</span>
+                    <strong>{displayValue(resolveFieldValue(item, field))}</strong>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
+}
+
+function compareKey(kind: string, row: Row): string {
+  if (kind === "optimizations") return String(row.id ?? "");
+  return String(row.name ?? "");
+}
+
+function resolveFieldValue(row: Row, field: string): unknown {
+  if (field.includes(".")) {
+    return field.split(".").reduce<unknown>((current, part) => {
+      if (!current || typeof current !== "object") return "";
+      return (current as Record<string, unknown>)[part];
+    }, row);
+  }
+  return row[field];
 }

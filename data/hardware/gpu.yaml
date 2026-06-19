@@ -1,0 +1,62 @@
+schema_version: 1
+kind: hardware
+provenance:
+  source: "NVIDIA 官方规格页与公开技术资料"
+  url: "https://www.nvidia.com"
+  retrieved: "2026-06-19"
+  notes: "补充 inference-sim 原生仿真常见 GPU 硬件，使 Web UI 不再仅限 Ascend。"
+items:
+  - name: nvidia-h100
+    vendor: NVIDIA
+    device_type: gpu
+    chip_type: "H100 SXM"
+    year: 2024
+    fp16_tflops: 989.0
+    fp8_tflops: 1979.0
+    int8_tops: 3958.0
+    memory_gib: 80.0
+    memory_bandwidth_tbs: 3.35
+    power_w: 700.0
+    interconnect:
+      type: NVLink
+      links_per_device: 18
+      bandwidth_per_link_gbs: 50.0
+      topology: "8p_full_mesh"
+    calibration:
+      mfu_prefill: 0.47
+      mfu_decode: 0.36
+      status: assumed
+      notes: "面向 Web 原生仿真的经验性默认值，接近公开大模型 serving 常用 roofline 校准区间。"
+    supported_dtypes: [fp16, bf16, fp8, int8]
+    references:
+      - title: "NVIDIA H100 产品页"
+        url: "https://www.nvidia.com"
+        kind: docs
+    tags: [nvidia, gpu, inference-sim]
+  - name: nvidia-a100
+    vendor: NVIDIA
+    device_type: gpu
+    chip_type: "A100 SXM"
+    year: 2023
+    fp16_tflops: 312.0
+    fp8_tflops: 0
+    int8_tops: 624.0
+    memory_gib: 80.0
+    memory_bandwidth_tbs: 2.04
+    power_w: 400.0
+    interconnect:
+      type: NVLink
+      links_per_device: 12
+      bandwidth_per_link_gbs: 50.0
+      topology: "8p_full_mesh"
+    calibration:
+      mfu_prefill: 0.42
+      mfu_decode: 0.31
+      status: assumed
+      notes: "为 Web 接入 inference-sim 原生能力准备的泛化默认值。"
+    supported_dtypes: [fp16, bf16, int8]
+    references:
+      - title: "NVIDIA A100 产品页"
+        url: "https://www.nvidia.com"
+        kind: docs
+    tags: [nvidia, gpu, inference-sim]
